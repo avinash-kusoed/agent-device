@@ -4,7 +4,7 @@ url: /agent-device/docs/introduction.md
 
 # Introduction
 
-`agent-device` is an agent-native CLI for app verification and QA from coding agents. Across iOS, Android, tvOS, Android TV, Amazon Vega OS TV apps in the Vega Virtual Device, macOS, Linux desktop targets, and a minimal managed web browser surface, it provides the interactions and target-dependent structured UI, evidence, performance, and replay capabilities each backend supports.
+`agent-device` is an agent-native CLI for app verification and QA from coding agents. Across iOS, Android, HarmonyOS, tvOS, Android TV, Amazon Vega OS TV apps in the Vega Virtual Device, macOS, Linux desktop targets, and a minimal managed web browser surface, it provides the interactions and target-dependent structured UI, evidence, performance, and replay capabilities each backend supports.
 
 Use it when an agent needs to inspect and operate a real app, not just reason about source code or screenshots.
 
@@ -94,7 +94,7 @@ url: /agent-device/docs/agent-setup.md
 
 Use this page to wire Cursor, Codex, Claude Code, Windsurf, Cline, Goose, or another coding agent into mobile, TV, desktop, and web app verification. It covers skills, project rules, and MCP setup for React Native QA, Expo app verification, iOS Simulator automation, Android Emulator automation, tvOS checks, Android TV checks, Vega OS VVD control, web browser sessions, debugging, profiling, and exploratory QA.
 
-The short version: install the CLI, make the agent read version-matched help, and let the agent use either MCP tools or CLI commands. MCP tools use command contracts backed by the same `AgentDeviceClient` execution path as the CLI adapters.
+The short version: install the CLI, let the agent start normal work with the requested app, and use version-matched help only for specialized work or an unclear command shape. MCP tools use command contracts backed by the same `AgentDeviceClient` execution path as the CLI adapters.
 
 ## Prerequisite: install the CLI
 
@@ -111,28 +111,28 @@ npx agent-device --version
 npx agent-device help workflow
 ```
 
-Global install is better for normal agent workflows because repeated commands, skills, and terminal sessions resolve to one stable version. Project-local installs are also good when you want a lockfile-pinned agent-device version.
+Global install is better for normal agent workflows because repeated commands and terminal sessions resolve to one stable version. Project-local installs are also good when you want a lockfile-pinned agent-device version.
 
 Avoid telling agents to choose an npm version or run `npx -y agent-device@latest` autonomously: it fetches and executes a mutable npm package without a human prompt. For unattended agent use, prefer a trusted installed binary, a project-local install, or a version supplied by the user or project config.
 
 For Node, Xcode, Android SDK, macOS, and iOS device prerequisites, see [Installation](/agent-device/docs/installation.md).
 
-## Install the skill
+## Install the skills
 
-Install the skill when your agent runtime supports skills:
+Install the CLI first, then install the repository skills when your agent runtime supports them:
 
 ```bash
 npx skills add callstack/agent-device
 ```
 
-The bundled [agent-device skill](https://github.com/callstack/agent-device/blob/main/skills/agent-device/SKILL.md) is the canonical router for skill-aware clients. It intentionally points agents back to installed CLI help instead of duplicating the command manual.
+Skills are distributed from the GitHub repository rather than the npm package. The [agent-device skill](https://github.com/callstack/agent-device/blob/main/skills/agent-device/SKILL.md) is the canonical router for skill-aware clients. For focused simulator work, use the [iOS Simulator skill](https://github.com/callstack/agent-device/blob/main/skills/ios-simulator/SKILL.md) or [Android Emulator skill](https://github.com/callstack/agent-device/blob/main/skills/android-emulator/SKILL.md). They start normal work directly and route agents to the separately installed, version-matched CLI help only when the task is specialized or a command shape is unclear.
 
 ## Recommended agent rule
 
 Add this as a project rule, custom instruction, or skill equivalent when your agent client supports it:
 
 ```text
-Use agent-device only for app/device automation tasks. Before planning commands, run `agent-device --version` and read `agent-device help workflow`. For TV, Fire TV, or Vega OS tasks, read `agent-device help tv`. For exploratory QA, read `agent-device help dogfood`. For logs, network, audio, traces, or runtime failures, read `agent-device help debugging`. For React Native component trees, props/state/hooks, slow renders, or rerenders, read `agent-device help react-devtools`. For React Native JavaScript heap growth, heap snapshots, or retained-object leaks, read `agent-device help cdp`. For React Native apps, overlays, Metro/Fast Refresh blockers, and routing to React DevTools or debugging evidence, read `agent-device help react-native`.
+Use agent-device only for app/device automation tasks. For a normal app-driving task, start immediately. Do not probe first with `--help`, `--version`, `devices`, `appstate`, `snapshot`, or `screenshot`; open the requested app in the foreground and continue from its initial interactive snapshot. For TV, Fire TV, or Vega OS tasks, read `agent-device help tv`. For exploratory QA, read `agent-device help dogfood`. For logs, network, audio, traces, or runtime failures, read `agent-device help debugging`. For React Native component trees, props/state/hooks, slow renders, or rerenders, read `agent-device help react-devtools`. For React Native JavaScript heap growth, heap snapshots, allocation hotspots, or retained-object leaks, read `agent-device help cdp`. For React Native apps, overlays, Metro/Fast Refresh blockers, and routing to React DevTools or debugging evidence, read `agent-device help react-native`.
 
 Use MCP tools or the CLI in the integrated terminal. If `agent-device` is not on PATH but the user installed it globally in another shell, resolve the command the same way the user would from a normal terminal session and run that absolute path instead. This may require inspecting shell startup behavior or package-manager/global bin locations; do not assume the agent process `PATH` is the user's `PATH`. Do not silently fall back to `npx -y agent-device@latest`; ask or use an exact version. MCP exposes structured tools backed by the agent-device client; it does not expose generic shell execution. Prefer `open -> snapshot -i -> act -> re-snapshot -> verify -> close` where the target supports capture and selectors; otherwise follow target-specific help. Use current refs such as `@e3` for exploration and selectors for durable replay. Keep mutating commands against one session serial. Capture screenshots, logs, network, audio, perf, traces, recordings, and `.ad` replay scripts only when they add evidence.
 ```
@@ -145,7 +145,7 @@ For web automation, MCP tools can target `platform: "web"` after the managed bac
 
 Tool execution failures are returned as MCP tool results with `isError: true`; clients and agents should inspect the tool result, not only the successful JSON-RPC envelope.
 
-MCP clients must not use this server as a generic shell runner. If the CLI is missing, agents should ask a human before installing or updating packages, then verify with `agent-device --version` and start with `agent-device help workflow`.
+MCP clients must not use this server as a generic shell runner. If the CLI is missing, agents should ask a human before installing or updating packages, reconnect the server after setup, and retry the intended app-driving command without adding version/help probes.
 
 Global install configuration:
 
@@ -173,7 +173,7 @@ No global install variant. Pin a user- or project-selected package version for u
 }
 ```
 
-Registry metadata uses MCP name `io.github.callstackincubator/agent-device`, npm package `agent-device`, stdio transport, `mcpName` package verification, `server.json`, `glama.json`, and `smithery.yaml`. Glama lists the server at [callstack/agent-device](https://glama.ai/mcp/servers/callstack/agent-device).
+Registry metadata uses MCP name `io.github.callstack/agent-device`, npm package `agent-device`, stdio transport, `mcpName` package verification, `server.json`, `glama.json`, and `smithery.yaml`. Glama lists the server at [callstack/agent-device](https://glama.ai/mcp/servers/callstack/agent-device).
 
 ## Cursor
 
@@ -192,7 +192,7 @@ alwaysApply: true
 ---
 
 Use agent-device only for app/device automation tasks.
-Before planning device work, run `agent-device --version` and read `agent-device help workflow`.
+For a normal app-driving task, start immediately. Do not probe first with `--help`, `--version`, `devices`, `appstate`, `snapshot`, or `screenshot`; open the requested app in the foreground and continue from its initial interactive snapshot.
 For TV, Fire TV, or Vega OS tasks, read `agent-device help tv`.
 For exploratory QA, read `agent-device help dogfood`.
 For logs, network, audio, traces, or runtime failures, read `agent-device help debugging`.
@@ -210,11 +210,7 @@ EOF
 Then ask Cursor Agent to run:
 
 ```bash
-agent-device --version
-agent-device help workflow
-agent-device apps --platform ios
-agent-device open <app-or-url> --platform ios
-agent-device snapshot -i
+agent-device open <app-or-url> --platform ios --foreground
 ```
 
 ### Cursor path B: MCP tools
@@ -259,13 +255,10 @@ If the MCP server fails because Cursor cannot find the global binary, use the ab
 Put the recommended rule in `AGENTS.md` or the project instructions. Let Codex run `agent-device` in the terminal:
 
 ```bash
-agent-device help workflow
-agent-device boot --platform ios
-agent-device open <app-or-url> --platform ios
-agent-device snapshot -i
+agent-device open <app-or-url> --platform ios --foreground
 ```
 
-Some agent clients run commands in an environment that differs from the user's normal install shell. If the user installed `agent-device` globally but the agent cannot find it, resolve the command the same way the user would from a normal terminal session, then use the absolute binary path for `--version`, `help workflow`, and subsequent commands. This may require inspecting shell startup behavior or package-manager/global bin locations; do not assume the agent process `PATH` is the user's `PATH`.
+Some agent clients run commands in an environment that differs from the user's normal install shell. If the user installed `agent-device` globally but the agent cannot find it, resolve the command the same way the user would from a normal terminal session, then use the absolute binary path for the intended `open` and subsequent commands. This may require inspecting shell startup behavior or package-manager/global bin locations; do not assume the agent process `PATH` is the user's `PATH`.
 
 For reviews or planning-only tasks, tell the agent not to run devices unless explicitly requested.
 
@@ -282,7 +275,7 @@ cat > CLAUDE.md <<'EOF'
 # agent-device
 
 Use agent-device only for app/device automation tasks.
-Before planning device work, run `agent-device --version` and read `agent-device help workflow`.
+For a normal app-driving task, start immediately. Do not probe first with `--help`, `--version`, `devices`, `appstate`, `snapshot`, or `screenshot`; open the requested app in the foreground and continue from its initial interactive snapshot.
 For TV, Fire TV, or Vega OS tasks, read `agent-device help tv`.
 For exploratory QA, read `agent-device help dogfood`.
 For logs, network, audio, traces, or runtime failures, read `agent-device help debugging`.
@@ -300,10 +293,7 @@ EOF
 Then ask Claude Code to run:
 
 ```bash
-agent-device --version
-agent-device help workflow
-agent-device help dogfood
-agent-device help react-native
+agent-device open <app-or-url> --platform android --foreground
 ```
 
 ### Claude path B: MCP tools
@@ -346,7 +336,7 @@ The same CLI commands remain available in the integrated terminal for long-runni
 
 Use the [MCP server](#mcp-server) configuration when the client supports `mcpServers`, then tell the agent to use MCP tools or terminal CLI commands for device workflows.
 
-If the client has project rules or custom instructions, add the recommended agent rule above. If it does not, start the conversation by asking the agent to run `agent-device help workflow` before planning.
+If the client has project rules or custom instructions, add the recommended agent rule above. If it does not, ask the agent to open the requested app and continue from the initial interactive snapshot; introduce a help topic only when the task is specialized or a command shape is unclear.
 
 ## Why this setup works
 
@@ -365,6 +355,200 @@ agent-device help
 agent-device help workflow
 agent-device help dogfood
 ```
+
+
+
+---
+url: /agent-device/docs/ai-sdk.md
+---
+
+# AI SDK
+
+[Vercel's AI SDK](https://ai-sdk.dev/) can expose `agent-device` client methods as typed tools in a Node.js agent. `ToolLoopAgent` owns the model loop, while `createAgentDeviceClient()` owns the device session and keeps tool implementations aligned with the CLI command contracts.
+
+Install the integration dependencies:
+
+```bash
+pnpm add agent-device ai zod
+```
+
+The example below gives the model two deliberately small tools: one for observing the current UI and one for pressing an element returned by that observation.
+
+```ts
+import { ToolLoopAgent, tool } from 'ai';
+import { createAgentDeviceClient } from 'agent-device';
+import { z } from 'zod';
+
+const client = createAgentDeviceClient({
+  session: 'ai-sdk-agent',
+  lockPolicy: 'reject',
+});
+
+const agent = new ToolLoopAgent({
+  model: process.env.AI_MODEL!,
+  instructions: [
+    'Inspect the current UI before acting.',
+    'Only press an element ref returned by the latest snapshot.',
+    'Stop and explain when the requested state cannot be verified.',
+  ].join('\n'),
+  tools: {
+    snapshot: tool({
+      description: 'Return the interactive elements in the current device UI.',
+      inputSchema: z.object({}),
+      execute: async () => await client.capture.snapshot({ interactiveOnly: true }),
+    }),
+    press: tool({
+      description: 'Press an element from the latest snapshot by its @e ref.',
+      inputSchema: z.object({
+        ref: z.string().regex(/^@e\d+$/),
+      }),
+      execute: async ({ ref }) => await client.interactions.press({ ref }),
+    }),
+  },
+});
+
+try {
+  await client.apps.open({
+    app: 'com.example.app',
+    platform: 'ios',
+  });
+
+  const result = await agent.generate({
+    prompt: 'Navigate to Notifications and verify that notifications are enabled.',
+  });
+
+  console.log(result.text);
+} finally {
+  await client.sessions.close();
+}
+```
+
+Set `AI_MODEL` to a model available through your configured AI SDK provider. See the AI SDK references for [`ToolLoopAgent`](https://ai-sdk.dev/docs/reference/ai-sdk-core/tool-loop-agent) and [`tool()`](https://ai-sdk.dev/docs/reference/ai-sdk-core/tool).
+
+## Designing device tools
+
+Prefer focused tools over a single tool that accepts an arbitrary command name and arguments:
+
+- Validate tool input with a schema. In particular, constrain element refs to values such as `@e12` and make the model observe before acting.
+- Keep the `agent-device` client outside tool execution so calls share one named session.
+- Return typed client results directly unless the result needs an application-specific projection.
+- Let the host application own session cleanup with `try`/`finally`; do not rely on the model to close the session.
+- Use AI SDK's `needsApproval` option for actions that require human confirmation in your product.
+
+See [Node.js API](/agent-device/docs/client-api.md) for the complete client surface and runnable, typechecked `agent-device` examples.
+
+
+
+---
+url: /agent-device/docs/aws-device-farm.md
+---
+
+# AWS Device Farm
+
+Use AWS Device Farm for hosted Android and iOS remote-access WebDriver sessions. The adapter does not route Vega OS or accept a Vega Fire TV ARN. The initial Vega workflow uses a local VVD.
+
+## Credentials and connection
+
+AWS Device Farm uses the AWS CLI credential provider chain. `agent-device` runs `aws devicefarm ...`, so it works with any non-interactive AWS CLI credential source available in CI. It does not require `aws login`. See the [AWS CLI environment variable reference](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html) for supported credential sources.
+
+Use short-lived CI credentials instead of long-lived IAM user keys. In GitHub Actions, use OIDC to assume an IAM role and let the action export standard AWS environment variables. AWS documents [IAM OIDC providers](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html), and the official [`configure-aws-credentials` action](https://github.com/aws-actions/configure-aws-credentials) documents the GitHub Actions setup.
+
+For example, a CI job might set:
+
+```bash
+export AWS_REGION=us-west-2
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_SESSION_TOKEN=... # present for temporary credentials
+```
+
+AWS web identity flows can use:
+
+```bash
+export AWS_ROLE_ARN=arn:aws:iam::<account-id>:role/<role-name>
+export AWS_WEB_IDENTITY_TOKEN_FILE=/path/to/token
+export AWS_REGION=us-west-2
+```
+
+Connect with the Device Farm project, device, and optional app upload:
+
+```bash
+agent-device connect aws-device-farm \
+  --platform android \
+  --aws-project-arn arn:aws:devicefarm:us-west-2:<account-id>:project:<project-id> \
+  --aws-device-arn arn:aws:devicefarm:us-west-2::device:<device-id> \
+  --aws-app-arn arn:aws:devicefarm:us-west-2:<account-id>:upload:<upload-id>
+```
+
+`--aws-app-arn` is optional when the remote-access session does not need an uploaded app. You can also provide the ARNs through environment variables:
+
+```bash
+export AWS_DEVICE_FARM_PROJECT_ARN=...
+export AWS_DEVICE_FARM_DEVICE_ARN=...
+export AWS_DEVICE_FARM_APP_ARN=...
+```
+
+`AGENT_DEVICE_AWS_DEVICE_FARM_PROJECT_ARN`, `AGENT_DEVICE_AWS_DEVICE_FARM_DEVICE_ARN`, and `AGENT_DEVICE_AWS_DEVICE_FARM_APP_ARN` are accepted as agent-device-specific aliases.
+
+`connect` makes read-only `get-project`, `get-device`, and, when supplied, `get-upload` calls. It rejects a device or app for the wrong platform, and an app upload that is not ready. AWS Device Farm does not support app installation after remote-access session allocation. When an app is required, run the printed reconnect command, including `--session <name> --force`, before `open`.
+
+## CLI workflow
+
+Every unscoped `connect` creates a fresh connection. The printed next steps include its generated `--session`. Keep that flag on every command when multiple processes or CI jobs share a host. The active connection is only safe for one sequential workflow. To replace a named connection, run `connect ... --session <name> --force`. An unscoped `--force` creates a new connection and leaves existing sessions untouched.
+
+```bash
+export AWS_REGION=us-west-2
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_SESSION_TOKEN=...
+
+agent-device connect aws-device-farm \
+  --platform android \
+  --aws-project-arn "$AWS_DEVICE_FARM_PROJECT_ARN" \
+  --aws-device-arn "$AWS_DEVICE_FARM_DEVICE_ARN" \
+  --aws-app-arn "$AWS_DEVICE_FARM_APP_ARN" \
+  --provider-session-name "$GITHUB_JOB"
+
+agent-device open com.example.app
+agent-device snapshot -i
+agent-device close
+agent-device artifacts --json
+agent-device disconnect
+```
+
+For MCP-only use, run `connect` in the same effective state directory before starting `agent-device mcp`. MCP exposes operational tools but not provider `connect` commands.
+
+## Node.js client
+
+Use direct client configuration when the Node process manages AWS credentials and selectors:
+
+```ts
+import { createAgentDeviceClient } from 'agent-device';
+
+const client = createAgentDeviceClient({
+  leaseProvider: 'aws-device-farm',
+  platform: 'android',
+  awsProjectArn: process.env.AWS_DEVICE_FARM_PROJECT_ARN,
+  awsDeviceArn: process.env.AWS_DEVICE_FARM_DEVICE_ARN,
+  awsAppArn: process.env.AWS_DEVICE_FARM_APP_ARN,
+  awsRegion: process.env.AWS_REGION,
+});
+
+await client.apps.open({ app: 'com.example.app' });
+const closed = await client.sessions.close();
+```
+
+## Artifacts and troubleshooting
+
+After `close`, AWS Device Farm can return remote-access video and log artifacts after the provider finalizes them. Run `agent-device artifacts --json`, or look up a previous session explicitly:
+
+```bash
+agent-device artifacts <remote-access-session-arn> --provider aws-device-farm --json
+```
+
+If `connect` fails, use the reported `aws devicefarm get-*` error to check the credential chain, ARN, region, resource platform, or upload readiness. The provider has not allocated a device yet. If artifacts are pending immediately after `close`, retry the lookup.
+
+On hosted WebDriver sessions, `fill` checks that the field received focus before it sends keys. If it cannot confirm focus, it fails without typing. Use `snapshot -i` to confirm the target. If the driver cannot expose focus at all, use `press <target>` followed by `type <text>`. That sends text without confirming the destination.
 
 
 
@@ -531,25 +715,175 @@ Rapid UI changes can outpace accessibility tree updates. Mitigate by inserting e
 
 
 ---
+url: /agent-device/docs/browserstack.md
+---
+
+# BrowserStack
+
+Use BrowserStack App Automate for hosted Android and iOS WebDriver sessions.
+
+## Credentials and connection
+
+Set BrowserStack credentials in a non-interactive environment:
+
+```bash
+export BROWSERSTACK_USERNAME=...
+export BROWSERSTACK_ACCESS_KEY=...
+```
+
+Connect with the platform, exact device and OS version, and app to test:
+
+```bash
+agent-device connect browserstack \
+  --platform android \
+  --device "Google Pixel 8" \
+  --provider-os-version 14.0 \
+  --provider-app bs://app-id
+```
+
+`--provider-app` accepts a BrowserStack app reference such as `bs://...`, an HTTP(S) app URL, or an existing local app path. BrowserStack uploads a local path when it creates the hosted session.
+
+During `connect`, agent-device verifies the BrowserStack credentials and the exact device/OS pair. It checks a `bs://` reference against recent uploads and confirms that a local artifact exists before saving its absolute path. A public URL stays configured and BrowserStack validates it when the session starts. `open` still needs the app's installed package or bundle identifier, not its upload name.
+
+Optional labels:
+
+```bash
+--provider-project agent-device
+--provider-build "$GITHUB_RUN_ID"
+--provider-session-name "$GITHUB_JOB"
+```
+
+Optional device features:
+
+```bash
+--provider-device-orientation portrait   # or landscape        (alias --device-orientation)
+--provider-geo-location US                                   # (alias --geo-location)
+--provider-timezone New_York                                 # (alias --timezone)
+--provider-language Fr                                       # (alias --language)
+--provider-locale Fr                                         # (alias --locale)
+--provider-network-profile 4g-lte-advanced-good              # (alias --network-profile)
+--provider-custom-network 1000                               # (alias --custom-network)
+--provider-no-resign-app                                     # iOS only
+```
+
+BrowserStack receives these values in `bstack:options` when it creates the hosted session.
+
+- The orientation applies when the session starts. An activity without a fixed orientation, such as a Chrome Custom Tab hosting OAuth, can still open in landscape. Run `agent-device orientation portrait` after launching it when needed.
+- `--provider-network-profile` and `--provider-custom-network` are mutually exclusive.
+- `--provider-no-resign-app` applies to iOS only. BrowserStack re-signs uploaded iOS apps with its provisioning profile, which strips entitlements; opt out when testing entitlement-dependent features such as push notifications.
+
+## CLI workflow
+
+```bash
+export BROWSERSTACK_USERNAME=...
+export BROWSERSTACK_ACCESS_KEY=...
+
+agent-device connect browserstack \
+  --platform android \
+  --device "Google Pixel 8" \
+  --provider-os-version 14.0 \
+  --provider-app bs://app-id \
+  --provider-project agent-device \
+  --provider-build "$GITHUB_RUN_ID"
+
+agent-device open com.example.app
+agent-device snapshot -i
+agent-device click 'label="Continue"'
+agent-device close
+agent-device artifacts --json
+agent-device disconnect
+```
+
+For MCP-only use, run `connect` in the same effective state directory before starting `agent-device mcp`. MCP exposes `open`, `snapshot`, `click`, `close`, and `artifacts`, but not provider `connect` commands.
+
+## Node.js client
+
+Use direct client configuration when the Node process manages BrowserStack credentials and selectors rather than a saved CLI connection profile:
+
+```ts
+import { createAgentDeviceClient } from 'agent-device';
+
+const client = createAgentDeviceClient({
+  leaseProvider: 'browserstack',
+  platform: 'android',
+  device: 'Google Pixel 8',
+  providerOsVersion: '14.0',
+  providerApp: 'bs://app-id',
+  providerProject: 'agent-device',
+  providerBuild: process.env.GITHUB_RUN_ID,
+});
+
+await client.apps.open({ app: 'com.example.app' });
+const snapshot = await client.capture.snapshot({ interactiveOnly: true });
+console.log(snapshot.nodes.slice(0, 5));
+await client.interactions.click({ selector: 'label="Continue"' });
+const closed = await client.sessions.close();
+const providerSessionId = closed.provider?.providerSessionId;
+
+if (providerSessionId) {
+  const artifacts = await client.sessions.artifacts({
+    provider: 'browserstack',
+    providerSessionId,
+  });
+  console.log(artifacts.cloudArtifacts);
+}
+```
+
+## Artifacts and troubleshooting
+
+After `close`, BrowserStack can return session video, Appium logs, device logs, dashboard URLs, and public URLs. Run `agent-device artifacts --json`, or look up a previous session explicitly:
+
+```bash
+agent-device artifacts <webdriver-session-id> --provider browserstack --json
+```
+
+BrowserStack errors distinguish rejected credentials, an unavailable device/OS pair, a missing `bs://` upload, and a missing local artifact. If artifact lookup is pending immediately after `close`, retry it. BrowserStack may still be finalizing video and log URLs.
+
+On hosted WebDriver sessions, `fill` checks that the field received focus before it sends keys. If it cannot confirm focus, it fails without typing. Use `snapshot -i` to confirm the target. If the driver cannot expose focus at all, use `press <target>` followed by `type <text>`. That sends text without confirming the destination.
+
+
+
+---
 url: /agent-device/docs/client-api.md
 ---
 
-# Typed Client
+# Node.js API
 
-Use `createAgentDeviceClient()` when you want to drive the daemon from application code instead of shelling out to the CLI.
+Use `createAgentDeviceClient()` to give a Node.js agent typed access to device automation instead of shelling out to the CLI. Its methods can be exposed as model tools, called from deterministic orchestration code, or combined with another Node.js agent framework.
 
-For remote Metro-backed flows, import the reusable Node APIs instead of spawning the `agent-device` binary. The CLI uses the same helpers internally.
+Start with the [AI SDK](/agent-device/docs/ai-sdk.md) or [Eve](/agent-device/docs/eve.md) integration guide for complete tool-calling examples. The client is framework-neutral, so the same pattern works with other solutions that accept JavaScript or TypeScript functions as tools.
 
-Public subpath API exposed for Node consumers:
+## Runnable examples
+
+The repository includes [runnable, typechecked Node.js examples](https://github.com/callstack/agent-device/tree/main/examples/sdk) that import the same published `agent-device/*` entry points used by consumers:
+
+| Example                                                                                                             | Demonstrates                                                                |
+| ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`client-session.ts`](https://github.com/callstack/agent-device/blob/main/examples/sdk/client-session.ts)           | Open, snapshot, interact, handle typed errors, and always close the session |
+| [`contracts-result.ts`](https://github.com/callstack/agent-device/blob/main/examples/sdk/contracts-result.ts)       | Consume snapshot results with helpers from `agent-device/contracts`         |
+| [`batch-orchestration.ts`](https://github.com/callstack/agent-device/blob/main/examples/sdk/batch-orchestration.ts) | Run a batch through a custom transport                                      |
+| [`metro-runtime.ts`](https://github.com/callstack/agent-device/blob/main/examples/sdk/metro-runtime.ts)             | Normalize a Metro URL and resolve runtime transport hints                   |
+
+The examples are checked against the source SDK using their dedicated [`tsconfig.json`](https://github.com/callstack/agent-device/blob/main/examples/sdk/tsconfig.json). After building the package with `pnpm build`, run an example directly with Node:
+
+```bash
+node --experimental-strip-types examples/sdk/client-session.ts
+```
+
+## API reference
+
+Supported public entry points for Node consumers:
 
 - `agent-device`
   - `createAgentDeviceClient(options?)`
   - `createLocalArtifactAdapter(options?)`
   - `AppError`, `isAgentDeviceError(error)`, `normalizeAgentDeviceError(error)`
   - `centerOfRect(rect)`
-  - root types are limited to the typed client contracts used by hosted adapters, such as `AppListOptions`, `BackCommandOptions`, `ScrollOptions`, and command result types.
 - `agent-device/io`
-  - artifact adapter types, file input refs, and file output refs
+  - `createLocalArtifactAdapter(options?)`
+  - types: `ArtifactAdapter`, `ArtifactDescriptor`, `CreateTempFileOptions`, `FileInputRef`,
+    `FileOutputRef`, `LocalArtifactAdapterOptions`, `OutputVisibility`, `ReserveOutputOptions`,
+    `ReservedOutputFile`, `ResolveInputOptions`, `ResolvedInputFile`, `TemporaryFile`
 - `agent-device/metro`
   - `buildBundleUrl(baseUrl, platform)`
   - `normalizeBaseUrl(baseUrl)`
@@ -580,6 +914,7 @@ Public subpath API exposed for Node consumers:
   - `parseFindArgs(args)`
   - types: `FindMatchOptions`
 - `agent-device/install-source`
+  - `ARCHIVE_EXTENSIONS`
   - `isTrustedInstallSourceUrl(sourceUrl)`
   - `validateDownloadSourceUrl(url)`
   - types: `MaterializeInstallSource`
@@ -600,46 +935,89 @@ Public subpath API exposed for Node consumers:
   - `new LimrunRuntime(options)`
   - `runtime.getDeviceSession(device)`
   - types: `LimrunRuntimeOptions`, `LimrunDeviceSession`, `LimrunAndroidDeviceSession`,
-    `LimrunIosDeviceSession`, `AndroidAdbProvider`, `AndroidKeyboardState`,
-    `AndroidKeyboardDismissResult`
-
-The `contracts`, `selectors`, `finders`, `install-source`, `android-adb`, `limrun`, `artifacts`, `batch`, `metro`, `remote-config`, and `io` subpaths are the supported Node entry points. The former compatibility subpaths `agent-device/android-apps` and `agent-device/daemon`, plus hosted-runtime subpaths `agent-device/cloud-webdriver`, `agent-device/commands`, `agent-device/backend`, `agent-device/testing/conformance`, and `agent-device/observability`, are not published.
+    `LimrunIosDeviceSession`, `LimrunIosCommandExecution`
 
 ## Basic usage
 
-```ts
-import { createAgentDeviceClient } from 'agent-device';
+The canonical client example is embedded below. It is also runnable from [`examples/sdk/client-session.ts`](https://github.com/callstack/agent-device/blob/main/examples/sdk/client-session.ts).
 
-const client = createAgentDeviceClient({
-  session: 'qa-ios',
-  lockPolicy: 'reject',
-  lockPlatform: 'ios',
-});
+```ts file="<root>/../examples/sdk/client-session.ts"
+/**
+ * Root client session: create a client, open an app, capture a snapshot, tap
+ * a node, then close the session — with typed error handling via the
+ * exported error helpers.
+ *
+ * Demonstrates: `createAgentDeviceClient`, `AppError`, `isAgentDeviceError`,
+ * and `normalizeAgentDeviceError` from the `agent-device` root export.
+ *
+ * Prerequisites: an `agent-device` daemon target (a booted iOS simulator).
+ * This file typechecks without one; running it for real also requires
+ * `pnpm build` first, so the package resolves at runtime.
+ *
+ * Run: node --experimental-strip-types examples/sdk/client-session.ts
+ */
+import {
+  AppError,
+  createAgentDeviceClient,
+  isAgentDeviceError,
+  normalizeAgentDeviceError,
+} from 'agent-device';
 
-const devices = await client.devices.list({ platform: 'ios' });
-const capabilities = await client.devices.capabilities({ platform: 'ios' });
-const apps = await client.apps.list({ platform: 'ios' });
-const device = devices.find((candidate) => candidate.name === 'iPhone 16') ?? devices[0];
-if (!device) {
-  throw new Error('No iOS device available');
+async function resolveSnapshotCapableIosDevice(client: ReturnType<typeof createAgentDeviceClient>) {
+  const devices = await client.devices.list({ platform: 'ios' });
+  const device = devices[0];
+  if (!device) {
+    throw new AppError('DEVICE_NOT_FOUND', 'No iOS device available');
+  }
+
+  const capabilities = await client.devices.capabilities({ platform: 'ios' });
+  if (!capabilities.availableCommands.includes('snapshot')) {
+    throw new AppError('UNSUPPORTED_OPERATION', 'Selected target does not support snapshots');
+  }
+
+  return device;
 }
-if (!capabilities.availableCommands.includes('snapshot')) {
-  throw new Error('Selected target does not support snapshots');
+
+function reportAgentDeviceError(error: unknown): void {
+  const normalized = normalizeAgentDeviceError(error);
+  console.error(`agent-device error [${normalized.code}]: ${normalized.message}`);
+  if (normalized.hint) {
+    console.error(`hint: ${normalized.hint}`);
+  }
+  process.exitCode = 1;
 }
 
-await client.apps.open({
-  app: 'com.apple.Preferences',
-  platform: 'ios',
-  udid: device.id,
-  runtime: {
-    metroHost: '127.0.0.1',
-    metroPort: 8081,
-  },
-});
+async function main(): Promise<void> {
+  const client = createAgentDeviceClient({
+    session: 'sdk-example',
+    lockPolicy: 'reject',
+    lockPlatform: 'ios',
+  });
 
-const snapshot = await client.capture.snapshot({ interactiveOnly: true });
+  try {
+    const device = await resolveSnapshotCapableIosDevice(client);
 
-await client.sessions.close();
+    await client.apps.open({
+      app: 'com.apple.Preferences',
+      platform: 'ios',
+      udid: device.id,
+    });
+
+    const snapshot = await client.capture.snapshot({ interactiveOnly: true });
+    const target = snapshot.nodes.find((node) => node.role === 'button');
+    if (target) {
+      await client.interactions.press({ ref: target.ref });
+    }
+  } catch (error) {
+    if (!isAgentDeviceError(error)) throw error;
+    reportAgentDeviceError(error);
+  } finally {
+    await client.sessions.close();
+  }
+}
+
+await main();
+
 ```
 
 `client.devices.capabilities()` returns `{ device, availableCommands }`, using the same capability matrix as the CLI. Use it when a dynamic integration needs to decide which command names are valid for the selected target.
@@ -680,6 +1058,9 @@ const client = createAgentDeviceClient({
   leaseProvider: 'browserstack',
   providerOsVersion: '14.0',
   providerApp: 'bs://app-id',
+  // Optional hosted device features, applied when the session is created.
+  providerDeviceOrientation: 'portrait',
+  providerTimezone: 'New_York',
 });
 
 await client.apps.open({ app: 'com.example.app', platform: 'android', device: 'Google Pixel 8' });
@@ -687,7 +1068,7 @@ await client.capture.snapshot({ interactiveOnly: true });
 const closed = await client.sessions.close();
 ```
 
-Use `client.sessions.artifacts({ provider, providerSessionId })` with `closed.provider?.providerSessionId` to fetch hosted video/log URLs after close when the provider supports them. See [Device Clouds & Farms](/agent-device/docs/device-clouds.md) for Limrun, BrowserStack, AWS Device Farm, CLI, JavaScript, and MCP flows.
+Use `client.sessions.artifacts({ provider, providerSessionId })` with `closed.provider?.providerSessionId` to fetch provider-hosted video and log URLs after close. See the [BrowserStack](/agent-device/docs/browserstack.md), [AWS Device Farm](/agent-device/docs/aws-device-farm.md), and [Limrun](/agent-device/docs/limrun.md) guides for provider-specific setup.
 
 ## Web sessions
 
@@ -799,6 +1180,7 @@ Vega OS client support is currently VVD-only and covers device discovery, app op
 Supported command methods:
 
 - `wait`
+- `alert`
 - `appState`
 - `back`
 - `home`
@@ -807,20 +1189,27 @@ Supported command methods:
 - `keyboard`
 - `clipboard`
 - `tvRemote`
-- `alert`
+- `reactNative`
+- `doctor`
+- `prepare`
+- `viewport`
 
-Additional CLI-backed methods are exposed on their domain groups with typed option objects so Node consumers do not need to build raw daemon requests:
+The deprecated `rotate()` alias remains available for compatibility; use `orientation()` in new integrations.
 
-- `client.devices.boot()`
-- `client.devices.capabilities()`
-- `client.devices.shutdown()`
-- `client.apps.push()`
-- `client.apps.triggerEvent()`
-- `client.capture.diff()`
-- `client.interactions.click()`, `press()`, `longPress()`, `swipe()`, `pan()`, `fling()`, `focus()`, `type()`, `fill()`, `scroll()`, `pinch()`, `rotateGesture()`, `transformGesture()`, `get()`, `is()`, `find()`
+The complete domain-client method map is:
+
+- `client.devices.list()`, `capabilities()`, `boot()`, `shutdown()`
+- `client.sessions.list()`, `stateDir()`, `close()`, `saveScript()`, `artifacts()`
+- `client.apps.install()`, `reinstall()`, `installFromSource()`, `list()`, `open()`, `close()`, `push()`, `triggerEvent()`
+- `client.materializations.release()`
+- `client.leases.allocate()`, `heartbeat()`, `release()`
+- `client.metro.prepare()`, `reload()`
+- `client.capture.snapshot()`, `screenshot()`, `diff()`
+- `client.interactions.click()`, `press()`, `longPress()`, `swipe()`, `pan()`, `drag()`, `fling()`, `swipeGesture()`, `focus()`, `type()`, `fill()`, `scroll()`, `pinch()`, `rotateGesture()`, `transformGesture()`, `get()`, `is()`, `find()`
 - `client.replay.run()` and `client.replay.test()`
 - `client.batch.run()`
 - `client.observability.perf()`, `logs()`, `events()`, `network()`, and `audio()`
+- `client.debug.symbols()`
 - `client.recording.record()` and `client.recording.trace()`
 - `client.settings.update()`
 
@@ -848,11 +1237,13 @@ await client.observability.audio({ platform: 'web', action: 'probe', probeAction
 
 Web probes sample HTML media elements. Host-system probes use `platform: 'macos'`, `platform: 'ios'` for iOS simulators, or `platform: 'android'` for Android emulators on macOS hosts. They sample host system audio through ScreenCaptureKit and require Screen Recording permission. Physical iOS and Android app audio are not exposed by this command.
 
-`client.observability.perf()` returns daemon-shaped JSON so local and remote transports expose the same metrics payload. Pass `{ area: 'metrics' }` for the broad startup/CPU/memory/frame first pass, `{ area: 'frames' }` for a focused frame/jank-health payload, or `{ area: 'memory', action: 'sample' }` for a compact memory-only sample. Use `{ area: 'memory', action: 'snapshot', kind: 'android-hprof', out: 'app.hprof' }` on Android or `{ area: 'memory', action: 'snapshot', kind: 'memgraph', out: 'app.memgraph' }` on supported Apple simulator/macOS app sessions to write large memory artifacts to disk. Android native artifacts use `{ area: 'cpu', subject: 'profile', action: 'start' | 'stop' | 'report', kind: 'simpleperf', out }` and `{ area: 'trace', action: 'start' | 'stop', kind: 'perfetto', out }`; these Android-only commands return artifact paths and compact summaries, not trace/profile contents. Physical iOS device memgraph capture reports unavailable with a reason/hint. heapprofd allocation tracing is deferred until Perfetto plumbing is available. On Android and supported Apple targets, `data.metrics.fps.droppedFramePercent` is the primary frame-smoothness value. Android derives it from the current `adb shell dumpsys gfxinfo <package> framestats` window; connected iOS devices derive it from `xcrun xctrace` Animation Hitches for the active app process. Frame samples include `windowStartedAt`, `windowEndedAt`, and `worstWindows` so agents can correlate dropped-frame clusters with logs, network entries, and their own session actions. A successful Android read resets Android frame stats; `open <app>` resets the Android frame window too, so agents can call `perf({ area: 'frames' })`, perform a transition or gesture, then call it again to inspect that focused window. iOS simulator and macOS app sessions report frame health as unavailable rather than inventing FPS or dropped-frame values.
+Prefer an explicit area with `client.observability.perf()` so each request stays focused. Calling `perf()` without options or using `area: 'metrics'` remains a deprecated compatibility path until the next major release; on Android, that path retains the released `dumpsys cpuinfo` point sample. Pass `{ area: 'frames' }` for a bounded frame/jank-health payload or `{ area: 'memory', action: 'sample' }` for a compact memory-only sample. Use `{ area: 'memory', action: 'snapshot', kind: 'android-hprof', out: 'app.hprof' }` on Android or `{ area: 'memory', action: 'snapshot', kind: 'memgraph', out: 'app.memgraph' }` on supported Apple simulator/macOS app sessions to write large memory artifacts to disk. Android native artifacts use `{ area: 'cpu', subject: 'profile', action: 'start' | 'stop' | 'report', kind: 'simpleperf', out }` and `{ area: 'trace', action: 'start' | 'stop', kind: 'perfetto', out }`; CPU reports return at most ten top functions in data and print five, while trace/profile contents remain on disk. Physical iOS device memgraph capture reports unavailable with a reason/hint. On Android and supported Apple targets, `data.metrics.fps.droppedFramePercent` is the primary frame-smoothness value. Android derives it from the current `adb shell dumpsys gfxinfo <package> framestats` window; connected iOS devices derive it from `xcrun xctrace` Animation Hitches for the active app process. Frame samples include `windowStartedAt`, `windowEndedAt`, and `worstWindows` so agents can correlate dropped-frame clusters with logs, network entries, and their own session actions. A successful Android read resets Android frame stats; `open <app>` resets the Android frame window too, so agents can call `perf({ area: 'frames' })`, perform a transition or gesture, then call it again to inspect that focused window. iOS simulator and macOS app sessions report frame health as unavailable rather than inventing FPS or dropped-frame values.
 
-For Apple native profiling, call `perf({ area: 'cpu', subject: 'profile', action: 'start', kind: 'xctrace', template: 'Time Profiler', out: 'app.trace' })`, then stop with the same trace path and write a compact report with `action: 'report'`. `area: 'trace'` supports xctrace templates such as `Animation Hitches`. Responses include artifact paths and compact metadata only.
+For Apple native profiling, call `perf({ area: 'cpu', subject: 'profile', action: 'start', kind: 'xctrace', template: 'Time Profiler', out: 'app.trace' })`, then stop with the same trace path and write a compact report with `action: 'report'`. The CPU report includes a bounded weighted top-function summary; the raw trace remains an artifact. `area: 'trace'` supports xctrace templates such as `Animation Hitches`.
 
-`client.recording.record({ action: 'start', path, maxSize: 1024, quality: 'medium' })` starts a recording capped to a 1024 px longest edge with medium output quality.
+`client.recording.record({ action: 'start', path, quality: 'medium' })` starts a recording with medium output quality.
+
+`client.capture.screenshot({ path, scale: 0.3 })` captures a screenshot at 30% of its original width and height. `scale` accepts `0.01` through `1`.
 
 `client.batch.run({ steps })` accepts structured steps:
 `{ command: 'open', input: { app: 'settings' } }`. Step `input` uses the same fields as the
@@ -863,11 +1254,42 @@ executor.
 
 Use `agent-device/batch` when a bridge or in-process runner receives daemon-shaped requests but owns command dispatch itself. The helper keeps validation, inherited flags, serial execution, partial results, and error envelopes aligned with the daemon batch command.
 
-```ts
+The standalone custom-transport example is embedded below from [`examples/sdk/batch-orchestration.ts`](https://github.com/callstack/agent-device/blob/main/examples/sdk/batch-orchestration.ts).
+
+```ts file="<root>/../examples/sdk/batch-orchestration.ts"
+/**
+ * Batch orchestration for a custom transport: `runBatch` keeps step
+ * validation, inherited flags, serial execution, partial results, and
+ * daemon-shaped error envelopes aligned with the CLI's `batch` command, so a
+ * bridge that owns command dispatch itself does not have to reimplement them.
+ *
+ * Demonstrates: `runBatch` from `agent-device/batch`, consumed against the
+ * `DaemonResponse` result type from `agent-device/contracts`.
+ *
+ * Prerequisites: none — `dispatch` below is a stub; a real integration would
+ * replace it with a call into the bridge's own command dispatcher.
+ *
+ * Run: node --experimental-strip-types examples/sdk/batch-orchestration.ts
+ */
 import { runBatch } from 'agent-device/batch';
 import type { DaemonResponse } from 'agent-device/contracts';
 
 type BatchRequest = Parameters<typeof runBatch>[0];
+
+async function dispatch(stepReq: unknown): Promise<Record<string, unknown>> {
+  console.log('dispatching step', stepReq);
+  return { handled: true };
+}
+
+function bridgeErrorToDaemonResponse(error: unknown): Extract<DaemonResponse, { ok: false }> {
+  return {
+    ok: false,
+    error: {
+      code: 'COMMAND_FAILED',
+      message: error instanceof Error ? error.message : 'Unknown bridge error',
+    },
+  };
+}
 
 async function handleBatch(req: BatchRequest): Promise<DaemonResponse> {
   return await runBatch(req, req.session ?? 'default', async (stepReq) => {
@@ -878,6 +1300,25 @@ async function handleBatch(req: BatchRequest): Promise<DaemonResponse> {
     }
   });
 }
+
+const result = await handleBatch({
+  command: 'batch',
+  positionals: [],
+  flags: {
+    batchSteps: [
+      { command: 'wait', input: { text: 'Welcome' } },
+      { command: 'back', input: {} },
+    ],
+  },
+});
+
+if (result.ok) {
+  console.log(`batch completed: ${JSON.stringify(result.data)}`);
+} else {
+  console.error(`batch failed [${result.error.code}]: ${result.error.message}`);
+  process.exitCode = 1;
+}
+
 ```
 
 ## Android `installFromSource()`
@@ -997,7 +1438,6 @@ const match = findSelectorChainMatch(snapshot.nodes, chain, {
 
 if (!match) {
   // Build a daemon-shaped error with formatSelectorFailure(...) if needed.
-}
 ```
 
 
@@ -1064,7 +1504,7 @@ agent-device app-switcher
 - `shutdown` turns off the selected Apple simulator or Android emulator.
 - `shutdown` must not target an active session device; use `close --shutdown` to end the session and turn it off.
 - `daemon stop --state-dir <path>` verifies the daemon PID/start-time identity, requests graceful shutdown, and reports whether provider-release state is known. Use `daemon stop --clean` to also remove retained Apple runner processes and leases owned by that daemon.
-- `device status` reads host-local advisory device claims without starting or contacting a daemon. Normal output shows live and attention-needed claims, then summarizes proven-stale records in one line; use `device status --stale` to inspect the hidden records. Scope either view with `--platform` plus `--udid` (Apple) or `--serial` (Android). Claims remain observational: a live claim does not yet block `open`, and stale inspection does not delete a claim or clean platform resources.
+- `device status` reads host-local device claims without starting or contacting a daemon. Normal output shows live and attention-needed claims, then summarizes proven-stale records in one line; use `device status --stale` to inspect the hidden records. Scope either view with `--platform` plus `--udid` (Apple) or `--serial` (Android). A foreign live or uncertain claim blocks `open`; a proven-dead owner is replaced only after its session's exact-owner durable resources reconcile successfully.
 - `--platform apple` is an alias for the Apple automation backend (`ios`, `tvOS`, `macOS` selection).
 - Use `--target mobile|tv|desktop` with `--platform` (required) to select phone/tablet vs TV-class vs desktop-class targets.
 - `boot` is mainly needed when starting a new session and `open` fails because no booted simulator/emulator is available.
@@ -1094,7 +1534,7 @@ agent-device app-switcher
 - Remote daemon clients can pass `--daemon-base-url http(s)://host:port[/base-path]` to skip local daemon discovery/startup and call a remote HTTP daemon directly.
 - Use `--daemon-auth-token <token>` (or `AGENT_DEVICE_DAEMON_AUTH_TOKEN`) for explicit service/API-token automation against non-loopback remote daemon URLs; the client sends it in both the JSON-RPC request token and HTTP auth headers.
 - Use [Remote Proxy](/agent-device/docs/remote-proxy.md) when you need to run `agent-device proxy` on a Mac with simulator/device access and drive it from another machine through cloudflared, ngrok, or another HTTP tunnel.
-- Use [Device Clouds & Farms](/agent-device/docs/device-clouds.md) when agents need BrowserStack or AWS Device Farm sessions from CI without interactive login.
+- Use [BrowserStack](/agent-device/docs/browserstack.md) or [AWS Device Farm](/agent-device/docs/aws-device-farm.md) when a CI agent needs a hosted device session without interactive login.
 - For human cloud access, `connect` can discover a cloud connection profile, while `connect --remote-config ...` uses a local profile. Both refresh a stored CLI session into a short-lived `adc_agent_...` token when needed. If no CLI session exists, interactive shells start login automatically; CI and non-interactive shells fail with API-token setup instructions. Use `--no-login` to disable implicit login. `AGENT_DEVICE_CLOUD_BASE_URL` is the bridge/control-plane API origin; its `/api-keys` route may redirect to the dashboard for token creation.
 - For remote `connect` and `connect --remote-config` flows, see [Remote Metro workflow](#remote-metro-workflow).
 - Android React Native relaunch flows require an installed package name for `open --relaunch`; install/reinstall the APK first, then relaunch by package. `open <apk|aab> --relaunch` is rejected because runtime hints are written through the installed app sandbox.
@@ -1172,6 +1612,7 @@ agent-device devices --platform android --android-device-allowlist emulator-5554
 agent-device devices
 agent-device devices --platform ios
 agent-device devices --platform android
+agent-device devices --platform harmonyos
 agent-device devices --platform vega --target tv
 agent-device devices --platform ios --ios-simulator-device-set /tmp/tenant-a/simulators
 agent-device devices --platform android --android-device-allowlist emulator-5554,device-1234
@@ -1180,10 +1621,19 @@ agent-device capabilities --session checkout --json
 ```
 
 - `devices` lists available targets after applying any platform selector or isolation scope flags.
-- Use `--platform` to narrow discovery to Apple-family (`ios`, `tvOS`, `macOS`), Android, or Vega OS targets.
+- Use `--platform` to narrow discovery to Apple-family (`ios`, `tvOS`, `macOS`), Android, HarmonyOS, or Vega OS targets.
 - Use `--ios-simulator-device-set` and `--android-device-allowlist` when you need tenant- or lab-scoped discovery.
 - `capabilities` reports the command names supported by the selected session device or an explicit `--platform`/`--device`/`--udid`/`--serial` target.
 - In JSON output, `capabilities` returns `{ device, availableCommands }`. Use `availableCommands` for dynamic integrations instead of maintaining a separate platform support table.
+
+### HarmonyOS command boundary
+
+HarmonyOS support uses HDC and ArkUI `uitest`. On current API 24 devices it supports lifecycle and HAP deployment, ArkUI snapshot/screenshot and selector reads, one-pointer touch and text actions, keyboard `enter`/`dismiss`, app logs, foreground app state, process RSS samples, and `settings clear-app-state`. Run `agent-device capabilities --platform harmonyos` for the authoritative command list for a selected device.
+
+- `gesture pan|fling|swipe` and `swipe` use HDC's single-pointer input primitives. Multi-touch gestures and target-authored `gesture drag` return `UNSUPPORTED_OPERATION` rather than approximating the interaction.
+- Physical HarmonyOS devices support whole-screen recording through `record start <path> --scope device` or `--scope system`. This uses the device ScreenRecorder service, not HDC `screenrecord`; emulator recording is explicitly rejected. HarmonyOS recording does not support `--fps`, `--quality`, or `--hide-touches`.
+- Orientation control, clipboard, alert automation, network/audio capture, push and app-event delivery, React Native helpers, and trace capture are not advertised for HarmonyOS. The public API 24 HDC surface has no usable `pasteboard`, notification, or `aa send` command on the supported emulator and physical device.
+- `settings` intentionally supports only `clear-app-state`; other system settings are not changed through undocumented parameter writes. `perf memory sample` provides process RSS; frame health and memory-snapshot artifacts remain unavailable.
 
 ## Diagnostics
 
@@ -1310,7 +1760,7 @@ agent-device close
 ## Snapshot and inspect
 
 ```bash
-agent-device snapshot [--diff] [-i] [-d <depth>] [-s <scope>] [--raw]
+agent-device snapshot [--diff] [-i] [-d <depth>] [-s <scope>] [--raw] [--actions] [--force-full] [--timeout <ms>]
 agent-device diff snapshot [-i] [-d <depth>] [-s <scope>] [--raw]
 agent-device get text @e1
 agent-device get attrs @e1
@@ -1327,6 +1777,14 @@ agent-device get attrs @e1
   Android interactive window roots when available, so keyboard and system-overlay nodes can appear
   alongside the app root; `androidSnapshot.captureMode` and `androidSnapshot.windowCount` describe
   the capture.
+- `--actions` names the custom accessibility affordances an element merged away (iOS
+  `UIAccessibilityCustomAction`, React Native `accessibilityActions`), so a card whose reply/options
+  controls are not separate elements still lists them. It is iOS-simulator-only and exists for
+  planning, not invocation: there is no API to trigger a named action, so reach the affordance
+  through the element's detail screen, the same control exposed as a labeled element elsewhere, or
+  coordinates from its rect. It is mutually exclusive with `--raw`, which takes a capture path that
+  cannot carry custom actions: the pair is rejected as `INVALID_ARGS` before any device work. See
+  [Snapshots](/agent-device/docs/snapshots.md) for the full constraints.
 - `diff snapshot` compares the current snapshot with the previous session baseline and then updates baseline.
 - `snapshot --diff` is an alias for `diff snapshot`.
 - Default snapshot text is an agent-facing, token-efficient view for planning and targeting actions. It may collapse helper/accessibility noise; use `--raw` or `--json` when you need the full provider tree.
@@ -1351,6 +1809,7 @@ agent-device alert dismiss
 - `wait @ref` resolves the ref to its label/text from that stored snapshot, then polls for that text; it does not track the original node identity.
 - Because `wait @ref` is text-based after resolution, duplicate labels can match a different element than the original ref target.
 - `wait` shares the selector/snapshot resolution flow used by `click`, `fill`, `get`, and `is`.
+- Wait failures carry a structured `error.details.reason` in `--json` output: `wait_target_absent` proves at least one readable capture saw no match; `wait_capture_stalled` means no readable capture arrived and is retriable; `wait_deadline_exceeded` means a later capture consumed the remaining budget after an earlier readable capture; `wait_landmark_identity_mismatch` is a replay destination-guard refusal; and `wait_stable_timeout` means the UI did not settle. Use `readableCaptures` and `waitedMs` instead of parsing error text.
 - `alert` inspects or handles system alerts on iOS simulator, macOS desktop, and Android native/runtime permission dialogs.
 - `alert` without an action is equivalent to `alert get`.
 - Use `alert get` for an immediate cheap check. Use `alert wait <short-ms>` only when a prompt may appear after async work.
@@ -1375,6 +1834,8 @@ agent-device swipe 540 1500 540 500 --count 8 --pause-ms 30 --pattern ping-pong
 agent-device gesture pan 200 420 0 -80 500
 agent-device gesture pan 200 420 80 -40 700 --pointer-count 2
 agent-device gesture fling right 200 420 180
+agent-device gesture drag 'id="drag-source"' 'id="drop-target"'
+agent-device gesture drag @e4~s12 'label="Archive"' 700 600 200
 agent-device longpress 300 500 800
 agent-device scroll down 0.5
 agent-device scroll down --pixels 320
@@ -1386,6 +1847,8 @@ agent-device gesture transform 200 420 80 -40 2 35 700 # combined pan, zoom, and
 
 `fill` clears then types. `type` does not clear.
 `type` accepts text only. Do not pass `@ref` to `type`; use `fill @ref "text"` to target a field directly, or `press @ref` then `type "text"` to append in the focused field.
+If `type` reports `TEXT_INPUT_NOT_FOCUSED`, focus a visible text input and retry; when accessibility does not expose the input, use a coordinate focus command before typing.
+On iOS, if `type` reports `TEXT_INPUT_SYNTHESIS_UNAVAILABLE` while the software keyboard is hidden, show the software keyboard, then retry `type` or `fill`. The runner reports this error instead of risking partial input through an unreliable text-entry path.
 Use plain `fill` or `type` first for ordinary login and form fields. Use `--delay-ms` on `type` or `fill` only when a debounced search field or search-as-you-type input actually misses characters, or when the app must receive incremental updates.
 Delayed typing intentionally prefers paced character entry over clipboard-style fallbacks so the target field receives each incremental update.
 On Android, `fill` also verifies text and treats IME-owned capture as a terminal failure instead of retrying against the wrong field.
@@ -1398,6 +1861,8 @@ Neither `swipe` nor `gesture fling` takes a duration, and `gesture rotate` takes
 Repeated coordinate swipes accept at most 200 repetitions and 10000ms pauses, and their combined
 gesture/pause schedule must fit within 60000ms.
 `gesture pan` accepts `x y dx dy [durationMs]` for deliberate drags. It uses one pointer by default. Add `--pointer-count 2` for a parallel two-finger pan with constant contact span and angle; this shares the bounded two-contact synthesizer used by transform while retaining pan intent. Android preserves the requested travel duration; iOS uses XCTest drag primitives for one-pointer pan and private XCTest synthesis for two-pointer pan.
+`gesture drag` accepts `source destination [sourceHoldMs] [moveMs] [destinationHoldMs]`, where each endpoint is a selector or a snapshot ref. It resolves both endpoints before dispatch and keeps one pointer down continuously through activation, movement, and the optional destination hold. Defaults are 800ms, 500ms, and 0ms; the combined gesture is capped at 10000ms. Recordings convert refs to selector chains so saved `.ad` scripts remain portable.
+Target-authored drag is supported on Android touch devices and iOS/iPadOS. Backends that cannot preserve all three authored phases reject it before injection.
 `gesture fling` accepts `up|down|left|right x y [distance]` for fast directional throws.
 `gesture rotate` accepts `degrees [x] [y]`; the degree sign controls direction. Pacing is derived from the requested rotation.
 `gesture transform` accepts `x y dx dy scale degrees [durationMs]` for one combined two-finger pan/zoom/rotate gesture on Android and iOS simulators. Pinch, rotate, two-finger pan, and transform use the same viewport-aware pointer planning; impossible paths fail before injection instead of clamping or distorting the requested motion.
@@ -1405,7 +1870,7 @@ On iOS simulators it uses private XCTest synthesis for a continuous two-finger p
 On Android, `gesture transform` injects a geometric two-finger path. App recognizers may report non-exact pan, scale, and rotation values, so verify qualitative state such as `pan changed yes`, `pinch changed yes`, and `rotate changed yes` unless the app explicitly promises exact centroid metrics. If exact app-state values matter, prefer isolated `gesture pan`, `gesture pinch`, or `gesture rotate` commands.
 `scroll` accepts either a relative amount (`0.5` means roughly half of the viewport on that axis) or `--pixels <n>` for a fixed-distance gesture. Large distances are clamped to the usable drag band so the gesture stays reliable across Android, iOS, and macOS.
 Default snapshot text output is visible-first, so off-screen interactive content is summarized instead of shown as tappable refs.
-When a target only appears in an off-screen summary, use `scroll <direction>` and then take a fresh `snapshot -i`. For repeated checks, a small shell loop is enough:
+When a target only appears in an off-screen summary, use `scroll <direction> --settle`: the response waits for the UI to go quiet and returns the diff against the tree you last observed, with fresh refs on the added lines, so no follow-up `snapshot -i` is needed. `back --settle` does the same for navigation. Both are best-effort and never fail the action. For repeated checks without settle, a small shell loop is enough:
 
 ```bash
 previous=''
@@ -1430,7 +1895,10 @@ Two-finger `gesture pan` and `gesture transform` are supported on Android and iO
 agent-device find "Sign In" click
 agent-device find label "Email" fill "user@example.com"
 agent-device find role button click
+agent-device find "Follow" list
 ```
+
+Actions: `click` (default; `press`/`tap` are aliases), `list`, `focus`, `fill`, `type`, `exists`, `wait`, `get text`, `get attrs`. `list` is read-only — it returns every match with its `@ref` and never taps, so use it to inspect before acting. Ambiguous matches are rejected with a candidates listing for text and selector queries alike; `--first`/`--last` opt into positional narrowing explicitly.
 
 ## Assertions
 
@@ -1460,9 +1928,11 @@ agent-device replay ./session.ad      # Run deterministic replay from .ad script
 agent-device test ./suite             # Run every .ad file in a folder or glob serially
 agent-device test ./suite --timeout 60000 --retries 1
 agent-device replay ./session.ad --from 4 --plan-digest <sha256>   # Execute step 4; if already completed, use the next safe index with this digest
+agent-device replay ./session.ad --keep-session   # Suppress its terminal close and continue interactively
 ```
 
 - `replay` runs deterministic `.ad` scripts.
+- `replay --keep-session` suppresses exactly an authored terminal `close` in native `.ad`; interior closes still run, and a close-less script is unchanged. The option is rejected by `test` and Maestro YAML.
 - `test` runs one or more `.ad` scripts as a serial suite from files, directories, or glob inputs.
 - `test --platform <platform>` filters suite files by `context platform=...` metadata instead of overriding the script target.
 - `test --timeout <ms>` and `test --retries <n>` apply per script attempt; `context timeout=...` and `context retries=...` can be declared inside the `.ad` header. Retries are capped at `3`, duplicate metadata keys are rejected, and timeouts are cooperative.
@@ -1539,6 +2009,9 @@ agent-device install-from-source --github-actions-artifact thymikee/RNCLI83:6635
 - Use `install` or `reinstall` for local `.apk`, `.aab`, `.app`, and `.ipa` paths; use `install-from-source` when the artifact already exists at a URL reachable by the daemon.
 - Direct Android URL sources may be `.apk` or `.aab`.
 - Trusted artifact service URLs may resolve to archives containing one installable `.apk`, `.aab`, `.ipa`, or iOS `.app` tar archive. Prefer `--github-actions-artifact` for GitHub Actions artifacts that a compatible remote daemon can resolve with its own credentials.
+- Downloads resolve and approve every redirect destination, pin each connection to the approved address, reject HTTPS downgrades, and follow at most five redirects. Sensitive caller headers are not forwarded across origins.
+- Downloaded artifacts are limited to 2 GiB compressed. Archive materialization is limited to 4 GiB expanded data, 100,000 entries, and three nested archive layers; links and special archive entries are rejected.
+- Standard `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` configuration is honored without delegating destination DNS resolution to the proxy.
 - `--retain-paths` keeps retained materialized artifact paths after install, and `--retention-ms <ms>` sets their TTL.
 - URL downloads follow the same `installFromSource()` safety checks and host restrictions as the JS client API.
 
@@ -1676,12 +2149,9 @@ agent-device keyboard dismiss
 - `keyboard status|get` is supported on Android emulator/device.
 - `keyboard dismiss` is supported on Android emulator/device and best-effort on iOS simulator/device.
 
-## Performance metrics
+## Performance diagnostics
 
 ```bash
-agent-device perf --json
-agent-device metrics --json
-agent-device perf metrics --json
 agent-device perf frames --json
 agent-device perf memory sample --json
 agent-device perf memory snapshot --kind android-hprof --out app.hprof
@@ -1701,33 +2171,30 @@ agent-device perf trace start --kind perfetto --out app.perfetto-trace
 agent-device perf trace stop --kind perfetto --out app.perfetto-trace
 ```
 
-- `perf metrics` returns a session-scoped metrics JSON blob. Bare `perf` and `metrics` remain aliases for `perf metrics`.
-- `perf frames` returns a focused frame/jank-health JSON blob from the same frame sampling source used by `perf metrics`.
-- `perf memory sample` returns a compact memory-only JSON blob for agents investigating growth/leaks without collecting a large artifact. It is better than raw memory command output for first-pass diagnosis because arrays are bounded, top offenders are compact, and the payload omits unrelated startup/CPU/frame data.
+- Prefer an explicit `frames`, `memory`, `cpu`, or `trace` area so each request answers one profiling question. Bare `perf`, `perf sample`, `perf metrics`, and the `metrics` alias remain deprecated compatibility forms until the next major release; they return aggregate evidence plus migration guidance. On Android, this compatibility path retains the released `dumpsys cpuinfo` point sample; use `perf cpu profile` for new CPU profiling workflows.
+- `perf frames` returns a focused, bounded frame/jank-health JSON blob.
+- `perf memory sample` returns a compact memory-only JSON blob for agents investigating growth/leaks without collecting a large artifact. It is better than raw memory command output for first-pass diagnosis because arrays and top offenders are bounded.
 - Example sample shape: `{"metrics":{"memory":{"available":true,"totalPssKb":562958,"totalRssKb":570304,"topConsumers":[{"name":"Dalvik Heap","pssKb":213456}]}}}`.
 - `perf memory snapshot` writes a heap/memgraph artifact to disk and returns path, size, kind, method, and support metadata. Large artifacts are never dumped into CLI/MCP/default JSON output.
 - Example default snapshot output: `Memory artifact (android-hprof): /tmp/app.hprof (42MB)`.
 - `cdp` targets React Native JavaScript heap evidence through Metro CDP. Use it for JS heap usage samples and heap snapshots; use `perf memory sample` and `perf memory snapshot` for native/process memory. See [Debugging & Profiling](/agent-device/docs/debugging-profiling.md) for the bounded leak workflow.
-- `perf cpu profile ... --kind xctrace` records an Apple `.trace` with the requested xctrace template and writes a compact JSON report from the most recent CPU profile trace.
+- `perf cpu profile ... --kind xctrace` records an Apple `.trace` with the requested xctrace template. `report` aggregates every run, writes compact JSON with at most ten weighted top self-time functions, and prints at most five while the raw trace stays on disk.
 - `perf trace ... --kind xctrace` records an Apple `.trace` such as Animation Hitches for native diagnosis.
 - xctrace perf commands return artifact paths and compact metadata only; inspect `.trace` files in Instruments/Xcode instead of dumping trace contents into agent context.
-- `perf cpu profile ... --kind simpleperf` starts/stops Android native CPU profiling for the active session package and can generate a compact JSON report artifact from the captured profile.
+- `perf cpu profile ... --kind simpleperf` starts/stops Android native CPU profiling for the active session package. Its report artifact keeps up to 50 parsed rows, while the response returns at most ten top functions and the CLI prints at most five.
 - `perf trace ... --kind perfetto` starts/stops Android Perfetto trace capture for the active session package.
 - Native profile/trace outputs are compact agent evidence: state, artifact path, size, and method. Raw `.perf.data` and `.perfetto-trace` contents stay on disk.
-- Without `--json`, `perf` prints a compact summary: frame health when reliable frame data is available, otherwise CPU/memory when those samples are available.
+- Without `--json`, each explicit perf area prints a compact focused summary.
+- App startup duration is measured by `open` and returned in `open`'s `startup` result. Use that result directly instead of the deprecated aggregate perf form.
 - Use native perf stop/report results as compact agent evidence, not raw profiler output. A successful Perfetto stop can return `state: "stopped"`, `outPath: "/tmp/app.perfetto-trace"`, `sizeBytes: 5392410`, and `method: "adb-shell-perfetto"` while the 5.3 MB raw trace stays on disk as the artifact.
-- `startup` is sampled from `open-command-roundtrip`: elapsed wall-clock time around each `open` command dispatch for the active session app target.
-- Android app sessions with an active package also sample:
+- Android app sessions with an active package support:
   - `fps` frame health from `adb shell dumpsys gfxinfo <package> framestats`, with `droppedFramePercent` as the primary value and `worstWindows` for dropped-frame clusters
   - `memory` from `adb shell dumpsys meminfo <package>` with values reported in kilobytes (`kB`)
-  - `cpu` from `adb shell dumpsys cpuinfo`, aggregated across matching package processes and reported as a recent percentage snapshot
-- Apple app sessions with an active bundle ID also sample:
+- Apple app sessions with an active bundle ID support:
   - `fps` frame health from `xcrun xctrace` Animation Hitches on connected iOS devices, with `droppedFramePercent` as the primary value and `worstWindows` for hitch clusters
   - `memory` from process RSS snapshots reported in kilobytes (`kB`)
-  - `cpu` from process CPU usage snapshots reported as a recent percentage
 - Platform support:
-  - `startup`: iOS simulator, iOS physical device, Android emulator/device
-  - `memory` and `cpu`: Android emulator/device, macOS app sessions, iOS simulators with an active app session (`open <app>` first), and iOS physical devices with an active app session
+  - `memory`: Android emulator/device, HarmonyOS device, macOS app sessions, iOS simulators with an active app session (`open <app>` first), and iOS physical devices with an active app session
   - `fps`: Android emulator/device app sessions and connected iOS device app sessions. iOS simulator and macOS frame health is reported unavailable because Apple tooling does not expose trustworthy app hitch data there.
   - `perf memory snapshot --kind android-hprof`: Android emulator/device app sessions with a running debuggable/profileable process and permitted heap dumping
   - `perf memory snapshot --kind memgraph`: iOS simulator and macOS app sessions with a running app process. Physical iOS devices report memgraph unavailable with a recovery hint.
@@ -1735,13 +2202,11 @@ agent-device perf trace stop --kind perfetto --out app.perfetto-trace
   - `perf cpu profile --kind xctrace`: iOS simulator app sessions, connected iOS device app sessions where xctrace can attach to the active process, and macOS app sessions when the app process can be resolved from the bundle ID.
   - `perf trace --kind xctrace`: iOS simulator app sessions, connected iOS device app sessions where xctrace can attach to the active process, and macOS app sessions when the selected xctrace template supports the target.
   - Android native profiling is not implemented under Apple xctrace perf; Android profiling is tracked separately.
-- If no startup sample exists yet for the session, run `open <app|url>` first and retry `perf metrics`.
+- HarmonyOS performance evidence is memory-only on the current public HDC surface: CPU profiling, frame sampling, and memory-snapshot artifacts are unavailable.
 - Android URL/deep-link opens infer the foreground package after launch when possible, including Expo Go/dev-client shells. If the session still has no app package/bundle ID, package-bound metrics remain unavailable until you `open <app>`.
-- Android frame health is reset after each successful `perf metrics` or `perf frames` read and after `open <app>`, so run `perf frames`, perform the interaction, then run `perf frames` again for a focused window.
+- Android frame health is reset after each successful `perf frames` read and after `open <app>`, so run `perf frames`, perform the interaction, then run `perf frames` again for a focused window.
 - Android Simpleperf and Perfetto collectors require an active Android app session with a running package process. They return artifact paths, sizes, and compact state summaries; they do not print profile or trace contents into the agent context. iOS native Simpleperf/Perfetto support is not provided by these commands.
-- On CoreDevice-backed physical iOS devices, `perf metrics` and `perf frames` record short `xcrun xctrace` samples. Keep the device unlocked, connected, and the app active in the foreground while sampling.
-- Interpretation note: this startup metric is command round-trip timing and does not represent true first frame / first interactive app instrumentation.
-- CPU data is a lightweight process snapshot, so an idle app may legitimately read as `0`.
+- On CoreDevice-backed physical iOS devices, `perf frames` records a short `xcrun xctrace` sample. Keep the device unlocked, connected, and the app active in the foreground while sampling.
 
 ## React Native component internals
 
@@ -1765,7 +2230,7 @@ agent-device react-devtools profile report @c5
 - Use it when a React Native workflow needs component hierarchy, props, state, hooks, render causes, slow components, or re-render counts.
 - For profiling, keep the window narrow and make one bounded first-pass survey: use the `profile stop` summary, run `profile slow --limit 5` and `profile rerenders --limit 5` once, add `profile timeline --limit 20` only when commit timing matters, then drill into a specific `@c` ref with `profile report`.
 - Do not repeatedly raise broad `profile slow` limits such as `--limit 50`, `--limit 200`, or `--limit 500` unless you have a specific target that needs more rows.
-- Keep using `snapshot`, `press`, `fill`, `logs`, `network`, `audio probe`, `perf metrics`, and `perf frames` for device/app runtime evidence. Use `react-devtools` for React internals.
+- Keep using `snapshot`, `press`, `fill`, `logs`, `network`, `audio probe`, `perf frames`, and `perf memory` for device/app runtime evidence. Use `react-devtools` for React internals.
 - For React Native apps, overlays, Metro/Fast Refresh blockers, and routing to React DevTools or debugging evidence, start with `agent-device help react-native`.
 - On Android, use `alert get`, `alert wait <short-ms>`, `alert accept`, and `alert dismiss` for runtime permission prompts and native alerts. On iOS, use the same alert commands for XCTest alerts, app-owned modal popups with native blocking markers, and blocking system dialogs. Do not use `settings permission` to answer a dialog already on screen; reserve it for setup or resetting permission state before a flow.
 - React Native development builds can connect to the DevTools daemon on port 8097. For Android emulators or physical devices, run `adb reverse tcp:8097 tcp:8097` if the app cannot reach the host.
@@ -1831,7 +2296,7 @@ agent-device metro reload --bundle-url "http://localhost:8081/index.bundle?platf
 ```bash
 agent-device screenshot                 # Auto filename
 agent-device screenshot page.png        # Explicit screenshot path
-agent-device screenshot page.png --max-size 1024  # Downscale longest edge for agent-friendly artifacts
+agent-device screenshot page.png --scale 0.3  # Resize both dimensions to 30% for agent context
 agent-device screenshot page.png --overlay-refs  # Draw current @eN refs and target rectangles onto the PNG
 agent-device screenshot baseline.png --normalize-status-bar  # Normalize iOS simulator chrome for reusable diff baselines
 agent-device screenshot page.png --platform web --fullscreen  # On web, --fullscreen/--full/-f captures the entire document
@@ -1846,19 +2311,18 @@ agent-device record start               # Start app-scoped recording after open 
 agent-device record start session.mp4   # Start app-scoped recording to explicit path
 agent-device record start session.mp4 --scope device  # Intentionally record the full simulator/device screen
 agent-device record start session.mp4 --fps 30  # Override iOS device runner FPS
-agent-device record start session.mp4 --max-size 1024 # Downscale longest edge
 agent-device record start session.mp4 --quality high # Higher-quality export (slower)
 agent-device record stop                # Stop active recording
 ```
 
 - Recordings always produce a video artifact. `record start` defaults to app scope and requires an active session from `open <app>`; use `--scope device` or `--scope system` to explicitly request whole-screen capture where the selected backend supports it, such as recordings that intentionally span the full screen, multiple apps, settings, home screen, or app transitions. When touch visualization is enabled, recordings also produce a gesture telemetry sidecar that can be used for post-processing or inspection.
-- `screenshot --max-size <px>` preserves aspect ratio and only downscales when the saved PNG's longest edge is larger than the requested size.
+- `screenshot --scale <factor>` proportionally resizes both dimensions. The accepted range is `0.01` through `1`; use `1` for full resolution. The former `--max-size <px>` flag was removed and is refused with migration guidance wherever it appears (CLI, `.ad` scripts, Node options, config, and the retired `AGENT_DEVICE_SCREENSHOT_MAX_SIZE` env var).
+- Set `AGENT_DEVICE_SCREENSHOT_SCALE=0.3` (or `screenshotScale` in config) as a token-conscious screenshot default for agent workflows. An explicit `--scale` overrides it.
+- Keep the scale default unset, or use `--scale 1`, when full-resolution screenshots are required for reusable pixel-diff baselines.
 - `screenshot --overlay-refs` captures a fresh full snapshot and burns visible `@eN` refs plus their target rectangles into the saved PNG.
 - `screenshot --normalize-status-bar` temporarily normalizes iOS simulator status-bar chrome for deterministic screenshot baselines; ordinary screenshots leave the simulator's current chrome visible.
-- `screenshot --max-size <px> --overlay-refs` writes a smaller image and draws refs for that final image size; avoid very small max sizes when text, icons, or labels need to remain readable.
-- `diff screenshot` compares the current live screenshot to `--baseline`, or compares `--baseline` to an optional saved `current.png` path without requiring an active session, then prints ranked changed regions with screen-space rectangles, shape, size, density, average color, and luminance, and writes a diff PNG with a light grayscale current-screen context, red-tinted changed pixels, and outlined changed regions when `--out` is provided. Live iOS simulator diffs normalize status-bar chrome by default; use `screenshot --normalize-status-bar` when capturing reusable baselines. JSON also includes normalized bounds.
-- If `tesseract` is installed, `diff screenshot` also adds best-effort OCR text deltas, movement clusters, and bbox size-change hints to the text and JSON output. OCR improves descriptions only; it does not change the pixel comparison or the diff PNG.
-- When OCR is available, `diff screenshot` also reports best-effort non-text visual deltas by masking OCR text boxes out of the diff and clustering remaining residuals. These are hints for icons, controls, and separators, not semantic icon recognition.
+- `screenshot --scale <factor> --overlay-refs` writes a smaller image and draws refs for that final image size; avoid very small scales when text, icons, or labels need to remain readable.
+- `diff screenshot` compares the current live screenshot to `--baseline`, or compares `--baseline` to an optional saved `current.png` path without requiring an active session. Its text output reports ranked changed regions with screen-space rectangles, changed-pixel counts, and each region's share of the diff; JSON also includes normalized rectangles. The earlier best-effort `ocr` and `nonTextDeltas` analyzers are retired; their optional result fields remain for source compatibility but are no longer emitted, so use the baseline/current images and diff artifact with vision for qualitative interpretation. It writes a diff PNG with a light grayscale current-screen context, red-tinted changed pixels, and outlined changed regions when `--out` is provided. Live iOS simulator diffs normalize status-bar chrome by default; use `screenshot --normalize-status-bar` when capturing reusable baselines.
 - `diff screenshot --overlay-refs` additionally writes a separate current-screen overlay guide for live captures without using that annotated image for the pixel comparison. If current-screen refs intersect changed regions, the output lists the best ref matches under those regions. Saved-image comparisons do not have live accessibility refs, so `--overlay-refs` is unavailable when a `current.png` path is provided.
 - In `--json` mode, each overlay ref also includes a screenshot-space `center` point for coordinate fallback like `press <x> <y>`.
 - Burned-in touch overlays are exported only on macOS hosts, because the overlay pipeline depends on Swift + AVFoundation helpers.
@@ -1949,8 +2413,6 @@ tail -50 ~/.agent-device/sessions/default/app.log
 
 - `--fps <n>` (1-120) applies to physical iOS device recording as an explicit FPS cap.
 
-- `--max-size <px>` preserves aspect ratio and only downscales when the recording's longest edge is larger than the requested size.
-
 - `--quality <medium|high>` controls recording output quality. Android maps it to `adb shell screenrecord --bit-rate`; Apple targets use it for export/encoding. `medium` is the default; pass `high` for evidence, release notes, or debugging visual artifacts. Legacy numeric values are still accepted for compatibility: `5`-`7` map to `medium`, and `8`-`10` map to `high`.
 
 ## Tracing
@@ -2013,12 +2475,13 @@ agent-device disconnect --remote-config ./agent-device.remote.json
 - `connect` without `--remote-config` authenticates to cloud when needed, fetches the connection profile, writes a generated local profile, stores the remote scope locally, and defers tenant lease allocation plus Metro preparation until a later command needs them.
 - Cloud connection profile responses must return a JSON object at `connection.remoteConfigProfile`. The older `connection.remoteConfig` JSON string shape is no longer accepted.
 - `--remote-config <path>` points to a local remote workflow profile that captures stable host, tenant/run, and any optional session, platform, lease backend, or Metro overrides for `connect`.
-- `connect --remote-config ...` follows the same state and deferred-preparation flow using the local profile instead of cloud discovery.
+- `connect --remote-config ...` follows the same verification, state, and deferred-preparation flow using the local profile instead of cloud discovery. Direct-provider profiles therefore require their provider credentials when `connect` runs; no device lease is created until a later device command.
 - Auth management commands are available for inspection and recovery: `agent-device auth status`, `agent-device auth login`, and `agent-device auth logout`. Human login stores a revocable CLI session locally; it does not create or persist an `adc_live_...` service token.
 - Cloud auth uses three credential classes: `adc_agent_...` short-lived command tokens, revocable CLI session refresh credentials, and explicit `adc_live_...` service/API tokens for CI. The CLI implements credential selection, CI refusal, local storage permissions, logout, and output redaction; the cloud API must enforce token expiry, tenant/run scope, revocation, one-time device approval, polling rate limits, and dashboard/API separation.
 - `AGENT_DEVICE_CLOUD_BASE_URL` should point at the bridge/control-plane API origin, not necessarily the dashboard origin. API-token setup links use `/api-keys` on that origin so the bridge can redirect users to the right dashboard page.
 - Deferred Metro preparation also applies to `batch` when any step opens an app and the batch does not provide its own per-step runtime.
-- After `connect`, `install-from-source`, `open`, `snapshot`, `devices`, `press`, `fill`, `screenshot`, and other normal commands reuse active connection state so agents do not repeat remote host/session/lease selectors inline. If `connection status` shows `leaseId=pending`, the first platform-bound command allocates or refreshes the lease. Passing the same `--remote-config` to a normal command is also supported for self-contained scripts; the CLI reuses matching saved state or creates it before dispatch.
+- `connect` without `--session` always creates a fresh remote session. Its human and JSON next steps include the generated `--session`; concurrent processes must preserve that value on every command so they cannot adopt another process's ambient connection. The active connection fallback remains a convenience for one sequential workflow only. To replace a connection, pass its returned session explicitly with `--session <name> --force`; `--force` without a session creates another connection without overwriting or releasing the previous one.
+- After `connect`, `install-from-source`, `open`, `snapshot`, `devices`, `press`, `fill`, `screenshot`, and other normal commands can reuse active connection state in a single sequential workflow so agents do not repeat remote host/session/lease selectors inline. If `connection status` shows `leaseId=pending`, the first platform-bound command allocates or refreshes the lease. Passing the same `--remote-config` to a normal command is also supported for self-contained scripts; the CLI reuses matching saved state or creates it before dispatch.
 - Self-contained remote scripts should end with `disconnect --remote-config <path>` or `disconnect` to release the lease and stop the owned Metro companion.
 - Explicit command-line flags override connected defaults. When `open` uses explicit remote daemon or tenant flags without saved runtime hints, the CLI warns because React Native apps may launch without Metro bundle/runtime hints.
 - `metroProxyBaseUrl` is the bridge origin. Do not prebuild `/api/metro/...` paths in the client profile; the CLI calls the bridge endpoints itself.
@@ -2052,7 +2515,7 @@ agent-device artifacts --provider aws-device-farm --provider-session <remote-acc
 - `artifacts` lists provider-hosted cloud artifacts such as videos, Appium logs, device logs, automation logs, and provider dashboard links.
 - The response uses `cloudArtifacts` so it stays separate from daemon-managed local `artifacts` returned by screenshot, recording, install, replay, and remote materialization flows.
 - Plain text output prints ready provider URLs. Use `--json` when scripts need the structured `cloudArtifacts` array.
-- Historical lookup requires `--provider-session <id>` plus `--provider <name>`. BrowserStack expects `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY`; AWS Device Farm uses the AWS CLI credential chain and infers the region from the session ARN when possible. See [Device Clouds & Farms](/agent-device/docs/device-clouds.md) for autonomous CI credential setup.
+- Historical lookup requires `--provider-session <id>` and `--provider <name>`. BrowserStack uses `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY`. AWS Device Farm uses the AWS CLI credential chain and infers the region from the session ARN when possible. See [BrowserStack](/agent-device/docs/browserstack.md) and [AWS Device Farm](/agent-device/docs/aws-device-farm.md) for CI credential setup.
 - When a cloud runtime is registered in-process by an embedding host, `artifacts` can infer the active provider session from the current lease before disconnect.
 - `disconnect --json` and `close --json` include provider release data when the runtime returns final cloud artifacts after session teardown. Some providers only finalize video/log URLs after the remote session is stopped, so retry `agent-device artifacts <provider-session-id> --provider <name> --json` if the first response is `pending`.
 
@@ -2094,22 +2557,28 @@ url: /agent-device/docs/configuration.md
 
 # Configuration
 
-Create an `agent-device.json` file to set persistent CLI defaults instead of repeating flags on every command.
+Use configuration for persistent CLI defaults instead of repeating flags on every command. Repository
+configuration and operator-controlled configuration have different trust scopes.
 
 ## Config file locations
 
 agent-device checks these sources in priority order:
 
-| Priority    | Location                      | Scope                   |
-| ----------- | ----------------------------- | ----------------------- |
-| 1 (lowest)  | `~/.agent-device/config.json` | User-level defaults     |
-| 2           | `./agent-device.json`         | Project-level overrides |
-| 3           | `AGENT_DEVICE_*` env vars     | Override config values  |
-| 4 (highest) | CLI flags                     | Override everything     |
+| Priority    | Location                      | Scope                                                       |
+| ----------- | ----------------------------- | ----------------------------------------------------------- |
+| 1 (lowest)  | `~/.agent-device/config.json` | User-level defaults, including connection/provider settings |
+| 2           | `./agent-device.json`         | Repository-controlled project-safe automation defaults      |
+| 3           | `AGENT_DEVICE_*` env vars     | Override config values                                      |
+| 4 (highest) | CLI flags                     | Override everything                                         |
 
-Project-level values override user-level values. Environment variables override both. CLI flags always win.
+Project-level values override user-level values where they are permitted. Environment variables override
+both. CLI flags always win. `--config <path>` or `AGENT_DEVICE_CONFIG` loads one explicit,
+operator-controlled file instead of the default locations.
 
-Use `--config <path>` or `AGENT_DEVICE_CONFIG` to load one specific config file instead of the default locations.
+`./agent-device.json` cannot contain endpoint, credential, daemon transport/server, tenant/run/lease,
+provider/cloud, Metro connection, or other operator-controlled fields. The CLI rejects those keys during
+parse, before it creates a daemon transport or sends a health request. This prevents a repository from
+pairing its chosen endpoint with a token from the user environment or user config.
 
 ## Config format
 
@@ -2120,6 +2589,7 @@ Environment variables follow the same fields using `AGENT_DEVICE_*` uppercase sn
 - `session` -> `AGENT_DEVICE_SESSION`
 - `daemonBaseUrl` -> `AGENT_DEVICE_DAEMON_BASE_URL`
 - `androidDeviceAllowlist` -> `AGENT_DEVICE_ANDROID_DEVICE_ALLOWLIST`
+- `screenshotScale` -> `AGENT_DEVICE_SCREENSHOT_SCALE`
 
 Config and environment sources use canonical option values rather than CLI flag names. Example:
 
@@ -2133,38 +2603,49 @@ Example:
   "platform": "ios",
   "device": "iPhone 16",
   "session": "qa-ios",
-  "snapshotDepth": 3,
-  "daemonBaseUrl": "http://127.0.0.1:4310/agent-device"
+  "snapshotDepth": 3
 }
 ```
 
-For non-loopback remote daemon URLs, also set `daemonAuthToken` or `AGENT_DEVICE_DAEMON_AUTH_TOKEN`. The client rejects non-loopback remote daemon URLs without auth.
+Use user config, an explicit config, CLI flags, environment variables, or `connect`/`--remote-config`
+for remote connections. For example, a user-owned config may contain:
 
-Common keys include:
+```json
+{
+  "daemonBaseUrl": "https://bridge.example.com/agent-device",
+  "daemonAuthToken": "<operator-managed-token>",
+  "daemonTransport": "http",
+  "tenant": "ci"
+}
+```
+
+For CI, provide both `AGENT_DEVICE_DAEMON_BASE_URL` and `AGENT_DEVICE_DAEMON_AUTH_TOKEN` from
+protected, operator-controlled configuration. Do not put either value in `./agent-device.json`.
+For non-loopback remote daemon URLs, the client still requires authentication. Saved `connect` profiles
+and explicit `--remote-config` workflows remain supported; generated profiles do not persist tokens.
+
+Project-safe keys include command defaults such as `platform`, `target`, `device`, `session`,
+`snapshotDepth`, recording/capture options, and action timing. Connection and provider keys below are
+user- or explicit-config only:
 
 - `stateDir`
 - `daemonBaseUrl`
 - `daemonAuthToken`
+- `daemonTransport`
+- `daemonServerMode`
 - `tenant`
 - `sessionIsolation`
 - `runId`
 - `leaseId`
 - `leaseBackend`
-- `sessionLock`
-- `platform`
-- `target`
-- `device`
-- `udid`
-- `serial`
-- `iosSimulatorDeviceSet`
-- `androidDeviceAllowlist`
-- `session`
-- `verbose`
-- `json`
+- provider/cloud fields (`provider*`, `aws*`)
+- Metro endpoint/token fields (`metro*`, `bundleUrl`)
+- request headers and structured install sources
+- local code and write destinations (`reporter`, `reportJunit`, `saveScript`, `launchConsole`)
 
-Command-specific defaults are supported too, for example `snapshotDepth`, `snapshotScope`, `activity`, `relaunch`, `shutdown`, `fps`, `quality`, `stepsFile`, or `saveScript`.
+Project config can use project-safe command defaults such as `snapshotDepth`, `snapshotScope`, `screenshotScale`, `activity`, `relaunch`, `shutdown`, `fps`, and `quality`. Local path and executable-module selectors such as `stepsFile` and `reporter` are user- or explicit-config only.
 
-`install-from-source` can also read a structured GitHub Actions artifact source from config when a compatible remote daemon resolves CI artifacts server-side:
+`install-from-source` can read a structured GitHub Actions artifact source from user or explicit config when a compatible remote daemon resolves CI artifacts server-side. Repository config rejects this operator-controlled source:
 
 ```json
 {
@@ -2179,7 +2660,7 @@ Command-specific defaults are supported too, for example `snapshotDepth`, `snaps
 
 Use a numeric `artifact` value for an artifact ID. Use a string `artifact` value for an artifact name.
 
-Explicit named-session lock defaults use the same config and env mapping too:
+Explicit named-session lock defaults use project-safe config and the same env mapping:
 
 - `sessionLock` -> `AGENT_DEVICE_SESSION_LOCK`
 
@@ -2191,7 +2672,7 @@ These env vars are the supported user-facing configuration surface. Other `AGENT
 
 | Category                            | Env vars                                                                                                                                                                                                                                                                                 | Decision                                                                                      |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| CLI defaults and config             | `AGENT_DEVICE_CONFIG`, `AGENT_DEVICE_SESSION`, `AGENT_DEVICE_PLATFORM`, `AGENT_DEVICE_SESSION_LOCK`, `AGENT_DEVICE_DAEMON_BASE_URL`, `AGENT_DEVICE_DAEMON_AUTH_TOKEN`, `AGENT_DEVICE_CLOUD_BASE_URL`                                                                                     | Public                                                                                        |
+| CLI defaults and config             | `AGENT_DEVICE_CONFIG`, `AGENT_DEVICE_SESSION`, `AGENT_DEVICE_PLATFORM`, `AGENT_DEVICE_SCREENSHOT_SCALE`, `AGENT_DEVICE_SESSION_LOCK`, `AGENT_DEVICE_DAEMON_BASE_URL`, `AGENT_DEVICE_DAEMON_AUTH_TOKEN`, `AGENT_DEVICE_CLOUD_BASE_URL`                                                    | Public                                                                                        |
 | Device scoping                      | `AGENT_DEVICE_ANDROID_DEVICE_ALLOWLIST`                                                                                                                                                                                                                                                  | Public                                                                                        |
 | Local daemon storage                | `AGENT_DEVICE_STATE_DIR`                                                                                                                                                                                                                                                                 | Public                                                                                        |
 | Metro and install helpers           | `AGENT_DEVICE_METRO_BEARER_TOKEN`, `AGENT_DEVICE_BUNDLETOOL_JAR`                                                                                                                                                                                                                         | Public                                                                                        |
@@ -2207,13 +2688,14 @@ Examples:
 
 - A default `snapshotDepth` applies to `snapshot`, `diff snapshot`, `click`, `fill`, `get`, `wait`, `find`, and `is`.
 - The same `snapshotDepth` value is ignored for commands like `open`, `close`, or `devices`.
+- A default `screenshotScale` (or `AGENT_DEVICE_SCREENSHOT_SCALE`) applies to `screenshot`; an explicit `--scale` wins.
 
 This keeps one shared config file usable across different command families.
 
 ## Failure behavior
 
 - If `--config` or `AGENT_DEVICE_CONFIG` points to a missing file, agent-device fails during CLI parse before contacting the daemon.
-- Invalid JSON, unknown keys, or invalid values in config files also fail during CLI parse with `INVALID_ARGS`.
+- Invalid JSON, unknown keys, invalid values, or an operator-controlled key in project config also fail during CLI parse with `INVALID_ARGS`. Rejections name the key and never echo its value.
 
 
 
@@ -2230,7 +2712,7 @@ Use `agent-device` when the task moves past UI automation and you need runtime e
 - Session app logs for targeted debugging windows
 - Network inspection from recent HTTP(s) entries in app logs via `network dump`
 - Audio-level probes for browser media elements and host-rendered simulator/emulator audio
-- Performance snapshots with `perf metrics` / `perf frames`
+- Focused performance evidence with `perf frames`, `perf memory`, and native profile reports
 - Apple crash symbolication with `debug symbols`
 - Screenshots, recordings, and replayable repro flows
 
@@ -2291,7 +2773,8 @@ agent-device logs clear --restart
 agent-device logs mark "before repro"
 agent-device press 'id="submit"'
 agent-device network dump 25 --include headers
-agent-device perf metrics --json
+agent-device perf frames --json
+agent-device perf memory sample --json
 agent-device logs path
 ```
 
@@ -2377,9 +2860,6 @@ agent-device audio probe start 10 1000 --platform android
 ### Performance snapshots
 
 ```bash
-agent-device perf --json
-agent-device metrics --json
-agent-device perf metrics --json
 agent-device perf frames --json
 agent-device perf memory sample --json
 agent-device perf memory snapshot --kind android-hprof --out app.hprof
@@ -2394,24 +2874,24 @@ agent-device perf trace start --kind perfetto --out app.perfetto-trace
 agent-device perf trace stop --kind perfetto --out app.perfetto-trace
 ```
 
-- `perf metrics` returns session-scoped startup and, where supported, CPU, memory, and frame-health samples. Bare `perf` and `metrics` remain aliases.
+- Prefer an explicit `frames`, `memory`, `cpu`, or `trace` area so the result stays focused and interpretable. Bare `perf`, `perf sample`, `perf metrics`, and `metrics` remain deprecated compatibility forms until the next major release.
 - `perf frames` returns a focused frame/jank-health payload.
-- `perf memory sample` returns a compact memory-only payload, preserving the memory metric source used by `perf metrics`. Prefer it over raw `dumpsys`/`leaks` output for first-pass agent diagnosis because it keeps arrays bounded, reports top offenders compactly, and omits unrelated startup/CPU/frame data.
+- `perf memory sample` returns a compact memory-only payload. Prefer it over raw `dumpsys`/`leaks` output for first-pass agent diagnosis because it keeps arrays bounded and reports top offenders compactly.
 - Example sample shape: `{"metrics":{"memory":{"available":true,"totalPssKb":562958,"totalRssKb":570304,"topConsumers":[{"name":"Dalvik Heap","pssKb":213456}]}}}`.
 - `perf memory snapshot` escalates to file artifacts. Android supports Java HPROF capture for active app processes when the build/device allows heap dumping. iOS simulator and macOS app sessions support memgraph capture through host-visible process tooling; physical iOS device memgraph capture reports unavailable with a hint instead of pretending support.
 - For React Native JavaScript heap leaks, use `agent-device cdp` against the Metro CDP target instead of native/process memory samples; see the CDP section above.
 - Heap and memgraph artifacts are returned as paths plus compact metadata. Example default output: `Memory artifact (android-hprof): /tmp/app.hprof (42MB)`. They are not printed or embedded in JSON by default. heapprofd/native allocation tracing is deferred until Perfetto plumbing is available.
-- `perf cpu profile ... --kind xctrace` and `perf trace ... --kind xctrace` collect Apple native `.trace` artifacts for iOS/macOS app sessions and return only artifact paths plus compact metadata.
-- Android native profiling uses `perf cpu profile ... --kind simpleperf`; Android native trace capture uses `perf trace ... --kind perfetto`. These commands require an active Android app session and return artifact paths/summaries instead of dumping profile or trace contents.
+- `perf cpu profile ... --kind xctrace` collects an Apple native `.trace`; `report` aggregates every run, returns at most ten weighted top functions in JSON, and prints five. `perf trace ... --kind xctrace` keeps trace data as an artifact.
+- Android native profiling uses `perf cpu profile ... --kind simpleperf`; its report likewise returns at most ten top functions and prints five. Android native trace capture uses `perf trace ... --kind perfetto`. These commands require an active Android app session and return artifact paths/summaries instead of dumping profile or trace contents.
 - Use the compact native perf result as agent evidence. For example, a successful Perfetto stop may return `state: "stopped"`, `outPath: "/tmp/app.perfetto-trace"`, `sizeBytes: 5392410`, and `method: "adb-shell-perfetto"` while the 5.3 MB raw trace remains on disk as the artifact.
-- Startup is measured around the `open` command; it is not first-frame instrumentation.
-- CPU, memory, and Android frame-health availability depend on platform and whether the active session is bound to an app/package.
+- Memory and Android frame-health availability depend on platform and whether the active session is bound to an app/package. HarmonyOS reports process RSS through HDC; CPU profiling, frame sampling, and memory-snapshot artifacts remain unavailable on the public HDC surface.
+- App startup duration is returned by `open` as `startup`; use that result directly rather than the deprecated aggregate perf response.
 - On Android and supported Apple targets, use `metrics.fps.droppedFramePercent` for the health check and `metrics.fps.worstWindows` to line up jank clusters with logs, network activity, or recent actions.
 
 ## Where to go deeper
 
 - Full command reference: [Commands](/agent-device/docs/commands.md)
-- Typed client observability APIs: [Typed Client](/agent-device/docs/client-api.md)
+- Node.js observability APIs: [Node.js API](/agent-device/docs/client-api.md)
 - Session behavior and lifecycle: [Sessions](/agent-device/docs/sessions.md)
 
 
@@ -2422,322 +2902,108 @@ url: /agent-device/docs/device-clouds.md
 
 # Device Clouds & Farms
 
-Use device cloud and device farm connections when the agent should drive Limrun direct instances, BrowserStack App Automate, or AWS Device Farm remote access through the local `agent-device` daemon:
+Use a device cloud or farm when an agent needs to automate a hosted mobile device without interactive login. Pick the provider that owns the devices and credentials you use:
+
+- [BrowserStack](/agent-device/docs/browserstack.md): Android and iOS App Automate sessions over WebDriver.
+- [AWS Device Farm](/agent-device/docs/aws-device-farm.md): Android and iOS remote-access sessions through AWS.
+- [Limrun](/agent-device/docs/limrun.md): direct iOS simulator and Android emulator instances.
+
+All three integrations run through the local `agent-device` daemon. `connect` checks the credentials and configuration, then saves non-secret connection state. It does not allocate a device. BrowserStack and AWS Device Farm allocate a hosted session on `open`. Limrun allocates an instance on the first device command, such as `install` or `open`.
+
+For each provider, the standard lifecycle is:
+
+1. Put provider credentials in CI secrets or another non-interactive credential source.
+2. Run `agent-device connect <provider>` with the provider selectors.
+3. Follow the printed next command to install or open the app.
+4. Run normal device commands, then `agent-device close` and `agent-device disconnect`.
+
+Each provider guide covers its connection selectors, client configuration, MCP setup, artifacts, and troubleshooting. Generated remote profiles are safe to store as non-secret configuration. They may include app IDs, ARNs, device names, OS versions, and labels, but never provider API keys or AWS secret keys.
+
+
+
+---
+url: /agent-device/docs/eve.md
+---
+
+# Eve
+
+[Eve](https://eve.dev/) is Vercel's filesystem-first framework for durable agents. Files under `agent/tools/` become typed model tools, which makes them a natural place to adapt the `agent-device` Node.js client.
+
+Create an Eve project, then add `agent-device`:
 
 ```bash
-agent-device connect browserstack ...
-agent-device connect aws-device-farm ...
-agent-device connect limrun ...
+npx eve@latest init mobile-agent
+cd mobile-agent
+pnpm add agent-device
 ```
 
-These providers are not remote `agent-device` daemons. `connect` writes a local generated profile, then the first lease-allocating command such as `open` creates the provider session. BrowserStack and AWS Device Farm use hosted WebDriver sessions; Limrun uses its direct iOS/Android provider runtime.
-
-## Interface Summary
-
-Device cloud providers have one setup model and three ways to drive the resulting session:
-
-| Interface         | What it does well                                                                                              | How provider setup works                                                                                                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CLI               | Best default for agents and CI. It creates the local provider profile once, then normal commands inherit it.   | Run `agent-device connect limrun`, `agent-device connect browserstack`, or `agent-device connect aws-device-farm`, then normal device commands.                                           |
-| JavaScript client | Best for Node integrations that already own process configuration.                                             | Pass provider fields in `createAgentDeviceClient(...)` config or per-command options, then call normal client methods such as `client.apps.open(...)` and `client.capture.snapshot(...)`. |
-| MCP               | Best for tool-only agents after bootstrap. MCP exposes operational tools backed by the same command contracts. | Run CLI `connect ...` before starting or using the MCP server in the same effective state directory. MCP intentionally does not expose `connect` or `disconnect` as provider setup tools. |
-
-The CLI is the canonical bootstrap path because it persists a non-secret generated profile and keeps provider credentials in the environment. After bootstrap, CLI, JavaScript, and MCP all use the same daemon/session behavior.
-
-## Autonomous Agent Requirements
-
-Agents can connect autonomously when all required credentials and selectors are present before the command starts.
-
-- Do not rely on browser-based login inside the agent workflow.
-- Put provider credentials in CI secrets, a local ignored env file, or the CI platform's secret store.
-- Keep generated remote profiles non-secret. They may contain provider app ids, Device Farm ARNs, device names, OS versions, and labels; they must not contain Limrun API keys, BrowserStack access keys, or AWS secret keys.
-- Run `agent-device artifacts --json` after `close` when the provider has video/log URLs to fetch.
-
-## CLI Experience
-
-The CLI experience is:
-
-1. Export provider credentials.
-2. Run `agent-device connect <provider>` with provider selectors.
-3. Run normal `agent-device` commands.
-4. Run `agent-device close` to stop the hosted session.
-5. Run `agent-device artifacts --json` to retrieve provider-hosted video/log/dashboard URLs.
-6. Run `agent-device disconnect` to clear local connection state.
-
-### Limrun
-
-Required environment:
-
-```bash
-export LIMRUN_API_KEY=...
-```
-
-`LIMRUN_REGION` optionally selects a Limrun region.
-
-Choose the platform to create a matching instance:
-
-```bash
-agent-device connect limrun --platform android
-```
-
-Limrun creates remote iOS simulators and Android emulators only. It does not use local or physical-device selectors such as `--udid`, `--serial`, or `--device`.
-
-Full Android flow:
-
-```bash
-export LIMRUN_API_KEY=...
-
-agent-device connect limrun --platform android
-agent-device open com.example.app
-agent-device snapshot -i
-agent-device click 'label="Continue"'
-agent-device close
-agent-device disconnect
-```
-
-Limrun Android uses the direct ADB tunnel, so the normal Android helper-backed snapshots, installs, and port reverse flow are available. This makes a local Metro server reachable through the normal Android reverse setup.
-
-Limrun iOS uses the direct Limrun iOS client. It supports normal app lifecycle, snapshots, screenshots, taps, text input, scrolling, and app install, but it cannot reverse a remote device port to a local host port. For iOS Metro or React DevTools, use a publicly reachable HTTPS endpoint or a bridge URL rather than a local-only address. Limrun does not currently expose provider artifacts through `agent-device artifacts`.
-
-### BrowserStack
-
-Required environment:
-
-```bash
-export BROWSERSTACK_USERNAME=...
-export BROWSERSTACK_ACCESS_KEY=...
-```
-
-Required connection selectors:
-
-```bash
-agent-device connect browserstack \
-  --platform android \
-  --device "Google Pixel 8" \
-  --provider-os-version 14.0 \
-  --provider-app bs://app-id
-```
-
-`--provider-app` accepts a BrowserStack app reference such as `bs://...`, an HTTP(S) app URL, or an existing local app path. Local paths are uploaded to BrowserStack when the hosted session is allocated.
-
-Optional labels:
-
-```bash
---provider-project agent-device
---provider-build "$GITHUB_RUN_ID"
---provider-session-name "$GITHUB_JOB"
-```
-
-Full flow:
-
-```bash
-export BROWSERSTACK_USERNAME=...
-export BROWSERSTACK_ACCESS_KEY=...
-
-agent-device connect browserstack \
-  --platform android \
-  --device "Google Pixel 8" \
-  --provider-os-version 14.0 \
-  --provider-app bs://app-id \
-  --provider-project agent-device \
-  --provider-build "$GITHUB_RUN_ID"
-
-agent-device open com.example.app
-agent-device snapshot -i
-agent-device click 'label="Continue"'
-agent-device close
-agent-device artifacts --json
-agent-device disconnect
-```
-
-### AWS Device Farm
-
-AWS Device Farm uses the AWS CLI credential provider chain. `agent-device` does not require `aws login`; it shells out to `aws devicefarm ...`, so any non-interactive AWS CLI credential source that works in CI works here. The AWS CLI documents environment variables such as `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `AWS_REGION`, `AWS_PROFILE`, `AWS_ROLE_ARN`, and `AWS_WEB_IDENTITY_TOKEN_FILE` in the [AWS CLI environment variable reference](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html).
-
-The current agent-device AWS Device Farm adapter supports hosted Android and iOS WebDriver sessions only. It does not route Vega OS or accept a Vega Fire TV ARN; the initial Vega workflow uses a local VVD only.
-
-Prefer short-lived CI credentials over long-lived IAM user keys. In GitHub Actions, use OIDC to assume an IAM role and let the action export the standard AWS environment variables; AWS documents IAM OIDC providers in the [IAM OIDC provider guide](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html), and the official `aws-actions/configure-aws-credentials` action documents the GitHub Actions setup in its [configure-aws-credentials repository](https://github.com/aws-actions/configure-aws-credentials). For other CI systems, use the platform's AWS federation support when available. If static keys are unavoidable, store them as CI secrets and scope their IAM policy to the needed Device Farm project/actions.
-
-Typical CI environment after federation or secret injection:
-
-```bash
-export AWS_REGION=us-west-2
-export AWS_ACCESS_KEY_ID=...
-export AWS_SECRET_ACCESS_KEY=...
-export AWS_SESSION_TOKEN=... # present for temporary credentials
-```
-
-AWS web identity flows can also use the AWS CLI's environment variables:
-
-```bash
-export AWS_ROLE_ARN=arn:aws:iam::<account-id>:role/<role-name>
-export AWS_WEB_IDENTITY_TOKEN_FILE=/path/to/token
-export AWS_REGION=us-west-2
-```
-
-Required connection selectors:
-
-```bash
-agent-device connect aws-device-farm \
-  --platform android \
-  --aws-project-arn arn:aws:devicefarm:us-west-2:<account-id>:project:<project-id> \
-  --aws-device-arn arn:aws:devicefarm:us-west-2::device:<device-id> \
-  --aws-app-arn arn:aws:devicefarm:us-west-2:<account-id>:upload:<upload-id>
-```
-
-`--aws-app-arn` is optional when the remote access session does not need an uploaded app attached. You can also provide ARNs through environment variables:
-
-```bash
-export AWS_DEVICE_FARM_PROJECT_ARN=...
-export AWS_DEVICE_FARM_DEVICE_ARN=...
-export AWS_DEVICE_FARM_APP_ARN=...
-```
-
-`AGENT_DEVICE_AWS_DEVICE_FARM_PROJECT_ARN`, `AGENT_DEVICE_AWS_DEVICE_FARM_DEVICE_ARN`, and `AGENT_DEVICE_AWS_DEVICE_FARM_APP_ARN` are accepted as agent-device-specific aliases.
-
-Full flow:
-
-```bash
-export AWS_REGION=us-west-2
-export AWS_ACCESS_KEY_ID=...
-export AWS_SECRET_ACCESS_KEY=...
-export AWS_SESSION_TOKEN=...
-
-agent-device connect aws-device-farm \
-  --platform android \
-  --aws-project-arn "$AWS_DEVICE_FARM_PROJECT_ARN" \
-  --aws-device-arn "$AWS_DEVICE_FARM_DEVICE_ARN" \
-  --aws-app-arn "$AWS_DEVICE_FARM_APP_ARN" \
-  --provider-session-name "$GITHUB_JOB"
-
-agent-device open com.example.app
-agent-device snapshot -i
-agent-device close
-agent-device artifacts --json
-agent-device disconnect
-```
-
-## JavaScript Client Experience
-
-Use the JavaScript client when a Node process owns the provider configuration and does not need a persisted CLI connection profile. Provider selectors can live in the client config and normal methods drive the session.
-
-```bash
-export BROWSERSTACK_USERNAME=...
-export BROWSERSTACK_ACCESS_KEY=...
-```
+Add `agent/tools/agent_device.ts`:
 
 ```ts
 import { createAgentDeviceClient } from 'agent-device';
+import { defineTool } from 'eve/tools';
+import { z } from 'zod';
 
 const client = createAgentDeviceClient({
-  leaseProvider: 'browserstack',
-  platform: 'android',
-  device: 'Google Pixel 8',
-  providerOsVersion: '14.0',
-  providerApp: 'bs://app-id',
-  providerProject: 'agent-device',
-  providerBuild: process.env.GITHUB_RUN_ID,
+  session: 'eve-agent',
+  lockPolicy: 'reject',
 });
 
-await client.apps.open({ app: 'com.example.app' });
-const snapshot = await client.capture.snapshot({ interactiveOnly: true });
-console.log(snapshot.nodes.slice(0, 5));
-await client.interactions.click({ selector: 'label="Continue"' });
-const closed = await client.sessions.close();
-const providerSessionId = closed.provider?.providerSessionId;
-
-if (providerSessionId) {
-  const artifacts = await client.sessions.artifacts({
-    provider: 'browserstack',
-    providerSessionId,
-  });
-  console.log(artifacts.cloudArtifacts);
-}
-```
-
-AWS Device Farm uses the same shape with AWS fields:
-
-```ts
-const client = createAgentDeviceClient({
-  leaseProvider: 'aws-device-farm',
-  platform: 'android',
-  awsProjectArn: process.env.AWS_DEVICE_FARM_PROJECT_ARN,
-  awsDeviceArn: process.env.AWS_DEVICE_FARM_DEVICE_ARN,
-  awsAppArn: process.env.AWS_DEVICE_FARM_APP_ARN,
-  awsRegion: process.env.AWS_REGION,
-});
-```
-
-Use the normal typed client methods when agent-device owns the daemon. Limrun uses the same client
-shape with `leaseProvider: 'limrun'`, `platform: 'android'` or `platform: 'ios'`, and
-`LIMRUN_API_KEY` in the daemon environment.
-
-The first-party agent-device-cloud bridge hosts the provider runtime itself and can reuse
-agent-device's Limrun implementation:
-
-```ts
-import { LimrunRuntime } from 'agent-device/limrun';
-
-const apiKey = process.env.LIMRUN_API_KEY;
-if (!apiKey) throw new Error('LIMRUN_API_KEY is required');
-
-const runtime = new LimrunRuntime({
-  apiKey,
-  region: process.env.LIMRUN_REGION,
+export default defineTool({
+  description: 'Inspect or interact with the current device UI.',
+  inputSchema: z.discriminatedUnion('action', [
+    z.object({
+      action: z.literal('open'),
+      app: z.string().min(1),
+      platform: z.enum(['ios', 'android']),
+    }),
+    z.object({
+      action: z.literal('snapshot'),
+    }),
+    z.object({
+      action: z.literal('press'),
+      ref: z.string().regex(/^@e\d+$/),
+    }),
+    z.object({
+      action: z.literal('close'),
+    }),
+  ]),
+  async execute(input) {
+    switch (input.action) {
+      case 'open':
+        return await client.apps.open({ app: input.app, platform: input.platform });
+      case 'snapshot':
+        return await client.capture.snapshot({ interactiveOnly: true });
+      case 'press':
+        return await client.interactions.press({ ref: input.ref });
+      case 'close':
+        return await client.sessions.close();
+    }
+  },
 });
 ```
 
-After allocating a lease, embedding bridges can call `runtime.getDeviceSession(device)` to access
-the allocated device's reusable semantic capabilities. The facade includes app inventory,
-foreground state where the provider exposes it, key input, bounded log reads, recording, remote
-asset installation, and the existing interactor. Android additionally exposes agent-device's
-`AndroidAdbProvider` abstraction for helpers and reversible port forwarding. iOS exposes a typed
-`simctl` execution handle for bridge-owned runner lifecycle and launch policy. Raw Limrun clients
-remain private to the provider runtime.
+Eve discovers the file automatically; no tool registry is required. Tell the agent how to use it in `agent/instructions.md`:
 
-## MCP Experience
+```md
+Use the agent_device tool to inspect and operate the app.
 
-The MCP server exposes operational command tools such as `open`, `snapshot`, `click`, `close`, and `artifacts`. It does not expose provider `connect` commands.
-
-For MCP-only operation, bootstrap with the CLI first in the same effective state directory:
-
-```bash
-export BROWSERSTACK_USERNAME=...
-export BROWSERSTACK_ACCESS_KEY=...
-agent-device connect browserstack --platform android --device "Google Pixel 8" --provider-os-version 14.0 --provider-app bs://app-id
-agent-device mcp
+- Open the requested app before inspecting it.
+- Call snapshot before every interaction.
+- Only press an @e ref from the latest snapshot.
+- Verify the requested outcome with another snapshot.
+- Call close when the device task is complete.
 ```
 
-Then an MCP client can call the normal tools:
+For CI or another short-lived host, the outer runner should still close the named `agent-device` session in its own cleanup path. Model-directed `close` is useful during the normal tool loop, but it is not a replacement for deterministic cleanup after errors or cancellation.
 
-```text
-open { "app": "com.example.app" }
-snapshot { "interactiveOnly": true }
-click { "target": { "kind": "selector", "selector": "label=\"Continue\"" } }
-close {}
-artifacts {}
-```
+## Runtime placement
 
-Use the same pattern for Limrun or AWS Device Farm: provide the provider credentials in the MCP server environment, run the corresponding CLI `connect` command once, then let MCP tools operate on the active connection. If an integration cannot run CLI bootstrap, use the JavaScript client path instead of MCP for provider setup.
+Run the tool in Eve's app runtime when it needs local access to simulators, emulators, platform tooling, and daemon state. If Eve is hosted separately from the devices, connect through an [agent-device remote proxy](/agent-device/docs/remote-proxy.md) instead.
 
-## Artifact Lookup
+Eve is currently beta, so check its [current documentation](https://eve.dev/) when upgrading. For a production example, read [Building Mobile QA Agents With Vercel Eve](https://www.callstack.com/blog/building-reviewable-mobile-qa-agents-with-vercel-eve), which covers a PR QA agent using an `agent_device` tool and a deterministic CI runner.
 
-`close` stops the active hosted session and may return a provider session id. `artifacts` fetches provider-hosted output:
-
-```bash
-agent-device artifacts --json
-agent-device artifacts <provider-session-id> --provider browserstack --json
-agent-device artifacts <session-arn> --provider aws-device-farm --json
-```
-
-BrowserStack can return session video, Appium logs, device logs, dashboard URL, and public URL. AWS Device Farm can return remote-access video and log artifacts after the provider finalizes them.
-
-## Troubleshooting
-
-- If BrowserStack connect fails before opening a session, check `BROWSERSTACK_USERNAME`, `BROWSERSTACK_ACCESS_KEY`, `--provider-app`, `--provider-os-version`, and `--device`.
-- If AWS allocation fails, first run `aws sts get-caller-identity` in the same CI step to confirm the AWS CLI credential chain is active, then verify the Device Farm ARNs and region.
-- If Limrun allocation fails, check `LIMRUN_API_KEY`, `--platform ios|android`, and the optional `LIMRUN_REGION`. Keep the key available in the environment used to start the local daemon.
-- If artifact lookup is pending immediately after `close`, retry `agent-device artifacts --json`. Some providers finalize video/log URLs asynchronously after the hosted session stops.
+See [Node.js API](/agent-device/docs/client-api.md) for the complete client surface.
 
 
 
@@ -2810,6 +3076,7 @@ One-off `npx` usage is fine for humans and scripts that intentionally fetch from
 - Node.js 22+
 - Xcode for iOS simulator/device automation (`simctl` + `devicectl`)
 - Android SDK / ADB for Android
+- HarmonyOS Command Line Tools for HarmonyOS (`hdc` available through `HDC_SDK_PATH`, `DEVECO_SDK_HOME`, or `HARMONYOS_COMMAND_LINE_TOOLS`)
 - Amazon Vega Developer Tools and an SDK-matched Vega Virtual Device for Vega OS TV
 - On macOS desktop targets, Swift 5.9+ / Xcode command-line tools are used to build the local `agent-device-macos-helper` on first use from source checkouts
 
@@ -2858,95 +3125,6 @@ vega device list
 
 
 ---
-url: /agent-device/docs/ios-snapshot-elements.md
----
-
-# iOS Snapshot Element Support
-
-This page tracks how `snapshot -i` presents common iOS interaction surfaces. It
-is scoped to the XCTest-backed iOS snapshot path and the default non-raw
-presentation. Use `snapshot --raw` or `snapshot --json` when investigating the
-provider tree itself.
-
-Sources used for this checklist:
-
-- Apple Human Interface Guidelines: [Components](https://developer.apple.com/design/human-interface-guidelines/components/)
-- Apple Human Interface Guidelines: [Selection and input](https://developer.apple.com/design/human-interface-guidelines/selection-and-input)
-- Apple Human Interface Guidelines: [Navigation and search](https://developer.apple.com/design/human-interface-guidelines/navigation-and-search)
-- Apple Human Interface Guidelines: [Menus and actions](https://developer.apple.com/design/human-interface-guidelines/menus-and-actions)
-- UIKit accessibility behavior: [UIAccessibility](https://developer.apple.com/documentation/UIKit/uiaccessibility-protocol) and [UIAccessibilityTraits](https://developer.apple.com/documentation/uikit/uiaccessibilitytraits)
-
-## Status Key
-
-| Status            | Meaning                                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------------------- |
-| Supported         | Expected to produce one actionable, unambiguous node in `snapshot -i`.                                   |
-| Pass-through      | Preserved when XCTest exposes it, but no custom iOS presentation shaping yet.                            |
-| Command-supported | Handled by a dedicated command rather than snapshot presentation.                                        |
-| Needs fixture     | Known common element, but we still need raw tree and screenshot-overlay samples before claiming support. |
-| Out of scope      | Useful UI information, but not an interaction target for `snapshot -i`.                                  |
-
-## Matrix
-
-| Apple/HIG area          | Common iOS surface                               | Expected XCTest/accessibility shape                                           | Current support                | Tested with                                          | Notes                                                                                                                                                                                            |
-| ----------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Menus and actions       | Button, toolbar button, pull-down or menu button | `Button`, sometimes wrapped in `Other` with the same label/rect               | Supported                      | Settings rows, Expensify Home, Expensify action menu | Same-rect `Other -> Button` wrappers collapse to the button. Descendant duplicate text/image decoration is suppressed.                                                                           |
-| Menus and actions       | Link                                             | `Link`, sometimes wrapped in repeated static/link nodes                       | Supported                      | Unit fixture from Settings privacy link shape        | Repeated link/static descendants collapse to one link. Needs more live Safari/Mail coverage.                                                                                                     |
-| Selection and input     | Switch toggle                                    | `Cell -> Button -> Switch`, or a standalone `Switch`                          | Supported                      | Settings Camera live screen, unit fixture            | Row-backed switch collapses to the switch control, not the row/button wrapper.                                                                                                                   |
-| Selection and input     | Toggle button                                    | Usually `Button` with selected/value/trait semantics                          | Pass-through                   | None yet                                             | We keep the button. Need real samples to decide whether selected/value should be surfaced more explicitly.                                                                                       |
-| Selection and input     | Checkbox                                         | `CheckBox`/`Checkbox` or button-like custom node                              | Pass-through                   | None yet                                             | Common on macOS and web-like/custom iOS apps. Interactive filtering keeps role strings containing checkbox, but iOS shaping has no special checkbox rules.                                       |
-| Selection and input     | Radio button/group                               | `RadioButton`, `RadioGroup`, or button-like custom nodes                      | Pass-through                   | None yet                                             | Interactive filtering keeps role strings containing radio. Need grouped native/custom samples.                                                                                                   |
-| Selection and input     | Text field                                       | `TextField`, `SecureTextField`, or wrapper `Other -> TextField`               | Supported                      | Expensify Search, unit fixture                       | Fillability already recognizes text/search/secure/text-view types. Wrapper collapses to the editable node.                                                                                       |
-| Selection and input     | Search field                                     | `SearchField`, often inside toolbar/search wrappers                           | Supported                      | Settings search field, Expensify search field        | Settings toolbar duplicates collapse to one search field plus Dictate button.                                                                                                                    |
-| Selection and input     | Text view / multiline editor                     | `TextView`/`TextArea`                                                         | Pass-through                   | Unit coverage for read/fill helpers                  | Fillability recognizes text views, but iOS presentation has no live complex editor sample yet.                                                                                                   |
-| Selection and input     | Token field                                      | `TextField`, token cells/buttons, or custom wrappers                          | Needs fixture                  | None yet                                             | Need Mail/Calendar recipient-field samples. Likely mixed editable field plus token buttons.                                                                                                      |
-| Selection and input     | Digit entry / OTP                                | Multiple `TextField`s, one hidden text field, or custom key grid              | Needs fixture                  | None yet                                             | We should avoid collapsing distinct digit boxes until tested.                                                                                                                                    |
-| Selection and input     | Slider                                           | `Slider`, usually adjustable and rect-backed                                  | Pass-through                   | None yet                                             | `snapshot -i` keeps rect-backed controls. Need Settings volume/brightness samples to verify value formatting and adjustability.                                                                  |
-| Selection and input     | Stepper                                          | `Stepper` or increment/decrement buttons                                      | Needs fixture                  | None yet                                             | Need native examples to decide whether to expose one adjustable control or separate buttons.                                                                                                     |
-| Selection and input     | Segmented control                                | `SegmentedControl` with segment buttons, or collapsed adjustable-like control | Needs fixture                  | None yet                                             | Current workflow docs still call out horizontal tab/filter bars that may collapse into one composite. Needs real-app coverage.                                                                   |
-| Selection and input     | Picker / picker wheel                            | `Picker`, `PickerWheel`, option cells, or modal sheet                         | Needs fixture                  | None yet                                             | Need Clock/Calendar/Settings samples. We should not over-collapse value wheels before testing.                                                                                                   |
-| Selection and input     | Date picker                                      | `DatePicker`, calendar buttons, picker wheels, compact button + popover       | Needs fixture                  | None yet                                             | Test compact, inline, and wheels styles separately.                                                                                                                                              |
-| Selection and input     | Virtual keyboard and keys                        | `Keyboard`, `Key`                                                             | Command-supported              | Expensify Search                                     | Offscreen keyboard subtrees are suppressed when they are below the app viewport. Keyboard interaction belongs to `keyboard`/`fill`/`type`; visible app-owned Done buttons remain normal buttons. |
-| Navigation and search   | Navigation bar / toolbar                         | `NavigationBar`, `Toolbar`, title text, bar buttons                           | Supported                      | Settings, Expensify Search                           | Navigation/action buttons remain; duplicated title/search wrapper nodes are suppressed when they duplicate semantic children.                                                                    |
-| Navigation and search   | Tab bar                                          | `TabBar`, tab buttons, or custom `Other` nodes                                | Pass-through                   | Expensify Home                                       | Expensify tabs are exposed as distinct `Other` items. Need native UITabBar samples to decide if `TabBar` container should stay visible or collapse.                                              |
-| Navigation and search   | Sidebar/list navigation                          | `Table`, `CollectionView`, `Cell`, row button wrappers                        | Supported                      | Settings top/bottom, Expensify lists                 | Row-backed Settings cells collapse to a single `Cell`. Scroll-hidden above/below hints stay on the scroll container.                                                                             |
-| Navigation and search   | Search results list                              | `ScrollView`/`Table`/`CollectionView` plus rows                               | Supported                      | Expensify Search                                     | Repeated legitimate list rows do not trigger the duplicate-nav warning when they are stacked instead of overlapping.                                                                             |
-| Menus and actions       | Context menu / edit menu                         | `Menu`, `MenuItem`, sheet/popover, or transient system surface                | Needs fixture                  | None yet                                             | Need long-press samples from Photos/Files/Text selection.                                                                                                                                        |
-| Menus and actions       | Activity/share view                              | Sheet with buttons, collections, extension cells                              | Needs fixture                  | None yet                                             | Treat as normal app/system UI until samples show duplication patterns.                                                                                                                           |
-| Presentation            | Alert                                            | `Alert` plus buttons, or native alert command result                          | Command-supported              | Provider tests                                       | Use `alert wait/get/accept/dismiss` for native alerts. Snapshot should still be inspected when an app-owned sheet looks like an alert.                                                           |
-| Presentation            | Sheet, bottom sheet, popover                     | `Sheet`/`Popover`/`Other` wrappers plus buttons/fields                        | Supported for common wrappers  | Expensify action menu                                | Backdrop dismiss and action-row wrappers collapse when semantic children are present. Need native sheet/popover examples.                                                                        |
-| Status                  | Activity indicator, progress indicator, gauge    | `ActivityIndicator`, `ProgressIndicator`, `Other` with value                  | Out of scope                   | None yet                                             | These are important state, but not primary interaction targets. They should stay in full snapshots; `snapshot -i` may omit them unless rect-backed.                                              |
-| Status                  | Page control / page indicator                    | `PageIndicator`, adjustable trait, dots/buttons                               | Needs fixture                  | None yet                                             | Often interactive via swipe or adjustable actions. Need samples before deciding presentation.                                                                                                    |
-| Layout and organization | Static text, headers, images, decoration         | `StaticText`, `Image`, `Other`                                                | Supported as descendants/noise | Settings, Expensify                                  | Repeated static/link/image descendants under an actionable parent are suppressed. Standalone useful text remains visible when retained by the interactive tree.                                  |
-| Layout and organization | Scroll bars / scroll indicators                  | `Other` with labels like vertical scroll bar                                  | Supported                      | Settings top/bottom, Expensify lists                 | Scroll indicator nodes are removed from the interactive tree and converted into `[content above/below ... hidden]` hints on the nearest scroll container.                                        |
-| Layout and organization | Collection/table/scroll containers               | `CollectionView`, `Table`, `ScrollView`                                       | Supported                      | Settings, Expensify                                  | Containers remain when they communicate scrollability or hidden content.                                                                                                                         |
-
-## Next Apps To Sample
-
-Use `snapshot -i`, `snapshot -i --raw --json`, and `screenshot --overlay-refs` for each sample before updating this page.
-
-| Element family          | Suggested apps/screens                                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------------- |
-| Slider / page indicator | Settings > Sounds & Haptics, Photos onboarding/carousel, Control Center if accessible       |
-| Segmented controls      | Photos library filters, Calendar view switcher, App Store tabs/filters                      |
-| Picker/date picker      | Clock alarm editor, Calendar event editor, Reminders date picker                            |
-| Stepper                 | Calendar/Reminders repeat or count fields, any system form that exposes increment/decrement |
-| Token field             | Mail compose recipients, Calendar invitees                                                  |
-| Context/edit menu       | Files long-press, Photos long-press, text selection in Notes                                |
-| Native tab bar          | App Store, Phone, Photos                                                                    |
-| Share/activity sheet    | Photos share, Safari share                                                                  |
-
-When adding coverage, record:
-
-- app and screen;
-- shaped `snapshot -i` output;
-- raw `snapshot -i --raw --json` node shape for the relevant subtree;
-- overlay screenshot path;
-- whether the result is supported, pass-through, or needs implementation work.
-
-
-
----
 url: /agent-device/docs/known-limitations.md
 ---
 
@@ -2976,6 +3154,71 @@ This is an Apple platform constraint that affects all XCUITest-based automation 
 - **Real devices**: pass `--test-ime` to `open` to opt in (off by default on real hardware, since a stuck helper IME leaves the real keyboard unavailable until restored — `agent-device` restores the previous IME on session close and on daemon startup if a prior session crashed, and `agent-device doctor` flags a stuck test IME with the exact `adb shell ime set <id>` command to fix it manually if needed).
 
 If the helper cannot be installed (locked-down managed devices, some cloud providers), text entry falls back to the existing ASCII-only `adb shell input text` path and non-ASCII `fill`/`type` reports the gap.
+
+
+
+---
+url: /agent-device/docs/limrun.md
+---
+
+# Limrun
+
+Use Limrun for direct remote iOS simulators and Android emulators. Limrun does not use local or physical-device selectors such as `--udid`, `--serial`, or `--device`.
+
+## Credentials and connection
+
+Set a Limrun API key in a non-interactive environment. `LIMRUN_REGION` optionally selects a region.
+
+```bash
+export LIMRUN_API_KEY=...
+agent-device connect limrun --platform android
+```
+
+Pass `android` or `ios` to select the instance type. `connect` verifies the selected service without creating an instance.
+
+## CLI workflow
+
+A new Limrun instance does not contain your app. Run `install <package-or-bundle-id> <app-path-or-url>` before `open`. The install command allocates the instance when needed, so you do not need to run `devices` first.
+
+```bash
+export LIMRUN_API_KEY=...
+
+agent-device connect limrun --platform android
+agent-device install com.example.app ./app.apk
+agent-device open com.example.app --relaunch
+agent-device snapshot -i
+agent-device click 'label="Continue"'
+agent-device close
+agent-device disconnect
+```
+
+Limrun Android uses the direct ADB tunnel. Normal Android helper-backed snapshots, installs, and port reverse flow are available, including the usual Android reverse setup for a local Metro server.
+
+Limrun iOS uses the direct Limrun iOS client. It supports app lifecycle commands, snapshots, screenshots, taps, text input, scrolling, and app installation. It cannot reverse a remote device port to a local host port. For iOS Metro or React DevTools, use a publicly reachable HTTPS endpoint or bridge URL instead of a local-only address.
+
+For MCP-only use, run `connect` in the same effective state directory before starting `agent-device mcp`. MCP exposes operational tools but not provider `connect` commands.
+
+## Node.js runtime
+
+The first-party agent-device-cloud bridge can use agent-device's Limrun runtime:
+
+```ts
+import { LimrunRuntime } from 'agent-device/limrun';
+
+const apiKey = process.env.LIMRUN_API_KEY;
+if (!apiKey) throw new Error('LIMRUN_API_KEY is required');
+
+const runtime = new LimrunRuntime({
+  apiKey,
+  region: process.env.LIMRUN_REGION,
+});
+```
+
+After allocating a lease, an embedding bridge can call `runtime.getDeviceSession(device)` for the allocated device's reusable semantic capabilities. The facade includes app inventory, foreground state where Limrun exposes it, key input, bounded log reads, recording, remote asset installation, and the existing interactor. Android also exposes agent-device's `AndroidAdbProvider` abstraction for helpers and reversible port forwarding. iOS exposes a typed `simctl` execution handle for bridge-owned runner lifecycle and launch policy. Raw Limrun clients remain private to the provider runtime.
+
+## Artifacts and troubleshooting
+
+Limrun does not currently expose provider artifacts through `agent-device artifacts`. If connect fails, check `LIMRUN_API_KEY` and the optional `LIMRUN_REGION`.
 
 
 
@@ -3129,7 +3372,9 @@ grep -rnE "\\bgesture[[:space:]]+rotate([[:space:]]+$num){4}" --include='*.ad' .
 ```
 
 Re-recording also produces a migrated script: the recorder writes the canonical form, so a fresh
-`open` → interact → `close --save-script` run is a valid alternative to editing by hand.
+`open --save-script` → interact → `close` run is a valid alternative to editing by hand. Recording
+evidence is only captured from action zero, so arm at `open`; a bare `close --save-script` on a
+session that was not armed at `open` is rejected.
 
 ### Maestro flows
 
@@ -3193,10 +3438,10 @@ Every device automation follows this pattern:
 
 ```bash
 # 1. Discover the installed app identifier when needed
-agent-device apps --platform ios # or android
+agent-device apps --platform ios # or android or harmonyos
 
 # 2. Navigate
-agent-device open SampleApp --platform ios # or android
+agent-device open SampleApp --platform ios # or android or harmonyos
 
 # 3. Snapshot to get element refs
 agent-device snapshot -i
@@ -3257,6 +3502,7 @@ agent-device close
 
 - Android: `.apk` and `.aab`
 - iOS: `.app` and `.ipa`
+- HarmonyOS: `.hap`
 - `.aab` requires `bundletool` in `PATH`, or `AGENT_DEVICE_BUNDLETOOL_JAR=<absolute-path-to-bundletool-all.jar>` with `java` in `PATH`.
 - `.aab` installs use bundletool `build-apks --mode universal`.
 - `.ipa` installs extract `Payload/*.app`; if multiple app bundles exist, `<app>` selects the target by bundle id or bundle name.
@@ -3384,12 +3630,11 @@ By default the proxy binds `127.0.0.1`. Use `--host 0.0.0.0` only when you inten
 
 ## Remote Client
 
-On the machine running the agent, connect to the public tunnel origin with the `/agent-device` base path and the printed token:
+On the machine running the agent, connect to the public tunnel origin with the `/agent-device` base path and the printed token. The generated connection profile never stores the token (only routing metadata), so export it once and every command in the session picks it up:
 
 ```bash
-agent-device connect proxy \
-  --daemon-base-url https://example.trycloudflare.com/agent-device \
-  --daemon-auth-token <token>
+export AGENT_DEVICE_DAEMON_AUTH_TOKEN=<token>
+agent-device connect proxy --daemon-base-url https://example.trycloudflare.com/agent-device
 agent-device devices --platform ios
 agent-device open MyApp --platform ios
 agent-device snapshot --platform ios
@@ -3397,11 +3642,15 @@ agent-device close
 agent-device disconnect
 ```
 
+Passing `--daemon-auth-token <token>` instead of exporting the environment variable also works, but only authenticates the single command it is passed to; subsequent commands need the token again through the env var, a `daemonAuthToken` entry in your remote config profile, or a repeated `--daemon-auth-token` flag.
+
 `connect proxy` stores the proxy profile and client identity. Device leases are automatic on `open` and expire after five minutes without commands. `close` releases the active session and device lease; `disconnect` clears local connection state.
 
 Multiple agents can share one proxy when each uses the normal `connect proxy`, `open`, commands, `close`, and `disconnect` flow. A busy device error means another agent owns the device until it closes or its inactivity lease expires.
 
-Do not commit a config file that contains a live `daemonAuthToken`.
+Do not put proxy endpoint, token, tenant, or provider fields in `./agent-device.json`: repository
+configuration is intentionally limited to project-safe automation defaults. Use `connect proxy`, user
+config, an explicit `--config` file, or protected CI environment variables for the endpoint and token.
 
 ## What Is Exposed
 
@@ -3468,6 +3717,17 @@ agent-device replay ~/.agent-device/sessions/e2e-2026-02-09T12-00-00-000Z.ad --s
 ```
 
 - Replay reads `.ad` scripts.
+- A script without a terminal `close` already leaves its session active. For an existing script that
+  does end in `close`, pass `--keep-session` to suppress only that final action and continue with
+  interactive commands in the same session:
+
+  ```bash
+  agent-device replay ./checkout.ad --session e2e-run --keep-session
+  agent-device snapshot -i --session e2e-run
+  ```
+
+  Interior `close` actions still run. The flag is intentionally unavailable to `test` because suite
+  attempts own cleanup, and it is rejected for Maestro YAML because that runtime owns its lifecycle.
 
 ## Run Maestro compatibility flows
 
@@ -3493,6 +3753,7 @@ Boundaries:
 - Failure diagnostics: resolved targets and `runFlow` paths are rendered, while `inputText` payloads remain hidden; do not place secrets in diagnostic identifiers.
 - Trust: `runScript` executes trusted scripts, may make `http.post` network requests, and is not a security sandbox; output keys cannot contain a dot.
 - Errors and tracking: unsupported commands and fields fail with source context when available; open a focused issue only when implementation work is planned.
+- Session takeover: `--keep-session` is a native `.ad` replay option and is rejected for Maestro YAML.
 
 See [ADR 0015](https://github.com/callstack/agent-device/blob/main/docs/adr/0015-direct-maestro-engine.md) for architecture, performance tradeoffs, and deliberate deviations. If a missing feature matters for your suite, [open a focused issue](https://github.com/callstack/agent-device/issues/new) with a small flow snippet.
 
@@ -3965,18 +4226,37 @@ agent-device snapshot -i                 # Interactive elements only (recommende
 agent-device snapshot -d 3               # Limit depth to 3 levels
 agent-device snapshot -s "Contacts"      # Scope to label/identifier
 agent-device snapshot -i -d 5            # Combine options
+agent-device snapshot --actions          # Name custom actions merged into elements (iOS simulator)
 agent-device diff snapshot               # Preferred structural diff vs previous session baseline
 agent-device snapshot --diff             # Alias for the same diff operation
 ```
 
-| Option       | Description                  |
-| ------------ | ---------------------------- |
-| `-i`         | Interactive-only output      |
-| `-d <depth>` | Limit tree depth             |
-| `-s <scope>` | Scope to label or identifier |
+| Option           | Description                                                                       |
+| ---------------- | --------------------------------------------------------------------------------- |
+| `--diff`         | Structural diff against the previous session baseline (alias for `diff snapshot`) |
+| `-i`             | Interactive-only output                                                           |
+| `-d <depth>`     | Limit tree depth                                                                  |
+| `-s <scope>`     | Scope to label or identifier                                                      |
+| `--raw`          | Full provider tree instead of the visible-first agent view                        |
+| `--actions`      | Name the custom accessibility actions merged inside an element (iOS simulator)    |
+| `--force-full`   | Re-emit the full tree even when it is unchanged since the previous snapshot       |
+| `--timeout <ms>` | Maximum wall-clock time for the snapshot command                                  |
 
-Note: If XCTest returns 0 nodes (foreground app changed), agent-device fails explicitly.
-It does not automatically switch to AX.
+`--actions` constraints:
+
+- iOS simulators only. Physical iOS devices, macOS, and Android targets reject the flag.
+- It names the affordances an element merged away (iOS `UIAccessibilityCustomAction`, React Native
+  `accessibilityActions`), so a card whose reply/options controls are not separate elements still
+  lists them.
+- The names are for planning and discovery, not invocation. There is no API to trigger one: reach
+  the affordance through the element's detail screen, through the same control exposed as a labeled
+  element elsewhere, or by coordinates from its rect.
+- Each merged element costs one accessibility round trip, so the pass is opt-in and bounded. When it
+  cannot read every candidate, the response says how many it read — an absent list on an unread
+  element is not evidence that it has none.
+- Mutually exclusive with `--raw`. Custom actions are only readable through the private-AX capture
+  path, which the raw diagnostic strategy does not take, so the pair is rejected as `INVALID_ARGS`
+  before any device work — on the CLI, the Node client, and MCP alike. Choose one or the other.
 
 ## Efficient snapshot usage
 
@@ -3996,7 +4276,6 @@ It does not automatically switch to AX.
 - Use `diff snapshot` between mutations to validate structural changes with lower output volume.
 - Use `snapshot --diff` when you discover the feature from snapshot help, but keep `diff snapshot` as the default exploration command.
 - Keep `--raw` for troubleshooting only when you need the full tree instead of visible-first output.
-- For the current iOS interaction-element support matrix, see [iOS Snapshot Element Support](/agent-device/docs/ios-snapshot-elements.md).
 
 `diff snapshot` and `snapshot --diff` behavior:
 
@@ -4021,10 +4300,26 @@ agent-device snapshot -i
 # [off-screen below] 2 interactive items: "All Contacts", "New List"
 ```
 
-## Backends (iOS):
+## iOS capture behavior
 
-- `xctest` (default): full fidelity, fast, no Accessibility permission required.
-- `ax`: fast accessibility tree, may miss details, requires Accessibility permission; simulator-only.
+Capture tiers are internal. There is no flag that selects a backend; `--raw` chooses a strategy, and
+the strategy owns which tiers it may use.
+
+- Regular (non-`--raw`) capture uses the **regular visible strategy**: it starts with the recursive
+  XCTest tree, and when that returns **sparse** output for a screen XCTest cannot serialize, it can
+  recover through a query sweep and then, on simulators, a private accessibility backend.
+- The ladder is bounded by the capture budget rather than retried indefinitely; when the budget is
+  spent, the best payload captured so far is returned.
+- Recovery and degradation stay observable instead of being presented as an empty UI. A
+  **recovered** capture warns that it fell back to another backend and is safe to continue from; a
+  **sparse** capture reports that no backend could read the screen and points you at `screenshot`
+  as visual truth plus coordinate taps. Use `--json` and read `snapshotQuality` when you need the
+  state, backend, and reason behind **degraded** output.
+- `--raw` uses the **raw diagnostic strategy**: it stays tree-first and preserves strict capture
+  failures, so a real XCTest accessibility serialization error surfaces as an error rather than as
+  an empty tree.
+- Private-accessibility recovery and `--actions` reads are simulator-specific. Physical iOS devices
+  have no equivalent independent semantic backend; they bound the XCTest work with a probe instead.
 
 
 
