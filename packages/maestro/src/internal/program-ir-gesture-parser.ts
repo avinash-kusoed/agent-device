@@ -42,12 +42,21 @@ export function parseMaestroTapOnCommand(
     name: 'tapOn',
     selectorKeys: MAESTRO_BASE_SELECTOR_KEYS,
     pointConflictingSelectorKeys: MAESTRO_BASE_SELECTOR_KEYS,
-    pointAllowedKeys: ['point', 'retryTapIfNoChange', 'repeat', 'delay', 'optional', 'label'],
+    pointAllowedKeys: [
+      'point',
+      'retryTapIfNoChange',
+      'repeat',
+      'delay',
+      'waitToSettleTimeoutMs',
+      'optional',
+      'label',
+    ],
     selectorAllowedKeys: [
       ...MAESTRO_BASE_SELECTOR_KEYS,
       'retryTapIfNoChange',
       'repeat',
       'delay',
+      'waitToSettleTimeoutMs',
       'optional',
       'label',
     ],
@@ -81,14 +90,23 @@ export function parseMaestroDoubleTapOnCommand(
   const parsed = parsePointOrSelectorTarget(value, commandNode, context, {
     name: 'doubleTapOn',
     selectorKeys: MAESTRO_BASE_SELECTOR_KEYS,
-    pointAllowedKeys: ['point', 'delay', 'optional', 'label'],
-    selectorAllowedKeys: [...MAESTRO_BASE_SELECTOR_KEYS, 'delay', 'optional', 'label'],
+    pointAllowedKeys: ['point', 'delay', 'retryTapIfNoChange', 'optional', 'label'],
+    selectorAllowedKeys: [
+      ...MAESTRO_BASE_SELECTOR_KEYS,
+      'delay',
+      'retryTapIfNoChange',
+      'optional',
+      'label',
+    ],
     parsePoint: parseMaestroAbsolutePoint,
   });
   const options = readOptionalCommandOption(parsed.entries, 'doubleTapOn', context);
   const delay = hasEntry(parsed.entries, 'delay')
     ? readOptionalNumeric(entryValue(parsed.entries, 'delay'), 'doubleTapOn.delay', context)
     : undefined;
+  const retryTapIfNoChange = readOptionalEntry(parsed.entries, 'retryTapIfNoChange', (entry) =>
+    readOptionalBoolean(entry, 'doubleTapOn.retryTapIfNoChange', context),
+  );
   const label = readMaestroCommandLabel(parsed.entries, 'doubleTapOn', context);
   return stripUndefined({
     kind: 'doubleTapOn' as const,
@@ -96,6 +114,7 @@ export function parseMaestroDoubleTapOnCommand(
     target: parsed.target,
     ...options,
     delay,
+    retryTapIfNoChange,
     label,
   });
 }
@@ -245,7 +264,10 @@ function parseScreenSwipe(
 function tapOptions(
   entries: readonly MaestroMapEntry[],
   context: MaestroProgramParseContext,
-): Pick<MaestroTapOnCommand, 'retryTapIfNoChange' | 'repeat' | 'delay' | 'optional' | 'label'> {
+): Pick<
+  MaestroTapOnCommand,
+  'retryTapIfNoChange' | 'repeat' | 'delay' | 'waitToSettleTimeoutMs' | 'optional' | 'label'
+> {
   const retryTapIfNoChange = readOptionalEntry(entries, 'retryTapIfNoChange', (entry) =>
     readOptionalBoolean(entry, 'tapOn.retryTapIfNoChange', context),
   );
@@ -255,9 +277,19 @@ function tapOptions(
   const delay = readOptionalEntry(entries, 'delay', (entry) =>
     readOptionalNumeric(entry, 'tapOn.delay', context),
   );
+  const waitToSettleTimeoutMs = readOptionalEntry(entries, 'waitToSettleTimeoutMs', (entry) =>
+    readOptionalNumeric(entry, 'tapOn.waitToSettleTimeoutMs', context),
+  );
   const optional = readOptionalCommandOption(entries, 'tapOn', context).optional;
   const label = readMaestroCommandLabel(entries, 'tapOn', context);
-  return stripUndefined({ retryTapIfNoChange, repeat, delay, optional, label });
+  return stripUndefined({
+    retryTapIfNoChange,
+    repeat,
+    delay,
+    waitToSettleTimeoutMs,
+    optional,
+    label,
+  });
 }
 
 export function parseMaestroDirection(

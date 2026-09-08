@@ -13,6 +13,7 @@ import type {
   DaemonResponse,
   DaemonResponseData,
 } from '../../daemon-request.ts';
+import type { DeviceInfo } from '@agent-device/kernel/device';
 import { AppError } from '@agent-device/kernel/errors';
 import type { Rect } from '@agent-device/kernel/snapshot';
 import type { DaemonMaestroRuntimeDependencies } from './daemon-runtime-port-observation.ts';
@@ -30,6 +31,8 @@ export type CreateDaemonMaestroRuntimeOperationsOptions = {
   readonly dependencies: DaemonMaestroRuntimeDependencies;
   readonly sourcePath?: string;
   readonly platform: Extract<MaestroPlatform, 'ios' | 'android'>;
+  /** Session device used for Maestro-only device utilities such as addMedia. */
+  readonly device?: DeviceInfo;
 };
 
 type MaestroPublicOperationResult<Operation extends MaestroPublicOperation> = Operation extends {

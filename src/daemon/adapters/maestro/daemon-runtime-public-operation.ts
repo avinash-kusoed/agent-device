@@ -21,7 +21,20 @@ export type MaestroPublicOperation =
     }
   | { kind: 'stopApp'; appId?: string }
   | { kind: 'clearState'; appId?: string }
+  | { kind: 'clearKeychain' }
   | { kind: 'openLink'; appId?: string; link: string; prewarmRunner: boolean }
+  | { kind: 'setLocation'; latitude: number; longitude: number }
+  | { kind: 'setOrientation'; orientation: string }
+  | { kind: 'setAirplaneMode'; enabled: boolean }
+  | {
+      kind: 'setPermission';
+      action: 'grant' | 'deny' | 'reset';
+      permission: string;
+      appId?: string;
+    }
+  | { kind: 'getText'; selector: MaestroDispatchSelector }
+  | { kind: 'clipboardWrite'; text: string }
+  | { kind: 'clipboardRead' }
   | { kind: 'typeText'; text: string }
   | {
       kind: 'clickSelector';
@@ -47,6 +60,18 @@ export function projectMaestroPublicOperation(
   operation: MaestroPublicOperation,
 ): ProjectedMaestroPublicOperation {
   if (operation.kind === 'clearState') return projectClearState(operation);
+  if (operation.kind === 'clearKeychain') return projectClearKeychain();
+  if (operation.kind === 'setLocation') return projectSetLocation(operation);
+  if (operation.kind === 'setOrientation') return projectSetOrientation(operation);
+  if (operation.kind === 'setAirplaneMode') return projectSetAirplaneMode(operation);
+  if (operation.kind === 'setPermission') return projectSetPermission(operation);
+  if (operation.kind === 'getText') return projectGetText(operation);
+  if (operation.kind === 'clipboardWrite') {
+    return { command: 'clipboard', positionals: ['write', operation.text] };
+  }
+  if (operation.kind === 'clipboardRead') {
+    return { command: 'clipboard', positionals: ['read'] };
+  }
   if (isAppOperation(operation)) return projectAppOperation(operation);
   if (isCaptureOperation(operation)) return projectCaptureOperation(operation);
   return projectInputOperation(operation);
@@ -107,6 +132,63 @@ function projectClearState(
   };
 }
 
+function projectClearKeychain(): ProjectedMaestroPublicOperation {
+  return {
+    command: 'settings',
+    positionals: ['reset-keychain', 'clear'],
+  };
+}
+
+function projectSetLocation(
+  operation: Extract<MaestroPublicOperation, { kind: 'setLocation' }>,
+): ProjectedMaestroPublicOperation {
+  return {
+    command: 'settings',
+    positionals: ['location', 'set', String(operation.latitude), String(operation.longitude)],
+  };
+}
+
+function projectSetOrientation(
+  operation: Extract<MaestroPublicOperation, { kind: 'setOrientation' }>,
+): ProjectedMaestroPublicOperation {
+  return {
+    command: 'orientation',
+    positionals: [operation.orientation],
+  };
+}
+
+function projectSetAirplaneMode(
+  operation: Extract<MaestroPublicOperation, { kind: 'setAirplaneMode' }>,
+): ProjectedMaestroPublicOperation {
+  return {
+    command: 'settings',
+    positionals: ['airplane', operation.enabled ? 'on' : 'off'],
+  };
+}
+
+function projectSetPermission(
+  operation: Extract<MaestroPublicOperation, { kind: 'setPermission' }>,
+): ProjectedMaestroPublicOperation {
+  // Permission mutations use the active session app (same as public settings permission).
+  void operation.appId;
+  return {
+    command: 'settings',
+    positionals: ['permission', operation.action, operation.permission],
+  };
+}
+
+function projectGetText(
+  operation: Extract<MaestroPublicOperation, { kind: 'getText' }>,
+): ProjectedMaestroPublicOperation {
+  return {
+    command: 'get',
+    positionals: [
+      'text',
+      `${operation.selector.key}=${JSON.stringify(operation.selector.value)}`,
+    ],
+  };
+}
+
 function projectOpenLink(
   operation: Extract<MaestroAppOperation, { kind: 'openLink' }>,
 ): ProjectedMaestroPublicOperation {
@@ -117,9 +199,22 @@ function projectOpenLink(
   };
 }
 
+type MaestroDeviceUtilityOperation = Extract<
+  MaestroPublicOperation,
+  | { kind: 'clearState' }
+  | { kind: 'clearKeychain' }
+  | { kind: 'setLocation' }
+  | { kind: 'setOrientation' }
+  | { kind: 'setAirplaneMode' }
+  | { kind: 'setPermission' }
+  | { kind: 'getText' }
+  | { kind: 'clipboardWrite' }
+  | { kind: 'clipboardRead' }
+>;
+
 type MaestroInputOperation = Exclude<
   MaestroPublicOperation,
-  MaestroAppOperation | MaestroCaptureOperation | { kind: 'clearState' }
+  MaestroAppOperation | MaestroCaptureOperation | MaestroDeviceUtilityOperation
 >;
 
 function projectInputOperation(operation: MaestroInputOperation): ProjectedMaestroPublicOperation {

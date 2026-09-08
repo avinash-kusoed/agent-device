@@ -20,11 +20,6 @@ export type FlowDivergence = {
 
 export const FLOW_DIVERGENCES: Record<string, FlowDivergence> = {
   // --- Unsupported commands (support-matrix decisions) ---
-  'upstream/045_clear_keychain': {
-    classification: 'we-reject',
-    reason: 'Standalone clearKeychain is outside the supported subset.',
-    unsupported: ['clearKeychain'],
-  },
   'upstream/051_set_location': {
     classification: 'we-reject',
     reason: 'setLocation is outside the supported subset.',

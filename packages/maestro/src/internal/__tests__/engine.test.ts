@@ -596,6 +596,43 @@ describe('executeMaestroProgram', () => {
     expect(texts).toEqual(['ready']);
   });
 
+  test('repeat.while rechecks the condition before each body iteration', async () => {
+    let visibleChecks = 0;
+    const taps: string[] = [];
+    const port = makePort({
+      observe: vi.fn(async ({ generation }) => {
+        visibleChecks += 1;
+        return {
+          generation,
+          matched: visibleChecks <= 2,
+          candidateCount: 1,
+        };
+      }),
+      execute: vi.fn(async (request) => {
+        if (request.command.kind === 'tapOn' && request.command.target.space === 'target') {
+          taps.push(request.command.target.selector.text ?? '');
+        }
+        request.invalidateObservation();
+        return {};
+      }),
+    });
+    const program = parseMaestroProgram(
+      [
+        '---',
+        '- repeat:',
+        '    while:',
+        '      visible: Loading',
+        '    commands:',
+        '      - tapOn: Retry',
+      ].join('\n'),
+    );
+
+    await executeMaestroProgram(program, port);
+
+    expect(visibleChecks).toBe(3);
+    expect(taps).toEqual(['Retry', 'Retry']);
+  });
+
   test('rejects recursive file includes before loading the child', async () => {
     const loadProgram = vi.fn();
     const program = parseMaestroProgram('---\n- runFlow: ./main.yaml\n', {

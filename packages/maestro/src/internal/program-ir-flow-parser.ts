@@ -121,23 +121,57 @@ export function parseMaestroRepeatCommand(
   const source = sourceAt(commandNode, context);
   const entries = readMapEntries(value, 'repeat', context);
   assertOnlyKeys(entries, 'repeat', ['times', 'commands', 'while'], context);
-  if (hasEntry(entries, 'while')) {
-    invalidAt(
-      'Maestro repeat.while is not supported; use repeat.times.',
-      entryValue(entries, 'while'),
-      context,
-    );
+  const hasTimes = hasEntry(entries, 'times');
+  const hasWhile = hasEntry(entries, 'while');
+  if (hasTimes === hasWhile) {
+    invalidAt('Maestro repeat requires exactly one of times or while.', commandNode, context);
   }
-  if (!hasEntry(entries, 'times'))
-    invalidAt('Maestro repeat requires times.', commandNode, context);
   if (!hasEntry(entries, 'commands'))
     invalidAt('Maestro repeat requires commands.', commandNode, context);
+  const commands = parseCommands(entryValue(entries, 'commands'), 'repeat.commands', context);
+  if (hasWhile) {
+    return stripUndefined({
+      kind: 'repeat' as const,
+      source,
+      while: parseRepeatWhileCondition(entryValue(entries, 'while'), context),
+      commands,
+    });
+  }
   return {
     kind: 'repeat',
     source,
     times: readRequiredNumeric(entryValue(entries, 'times'), 'repeat.times', context),
-    commands: parseCommands(entryValue(entries, 'commands'), 'repeat.commands', context),
+    commands,
   };
+}
+
+function parseRepeatWhileCondition(
+  node: Node | null | undefined,
+  context: MaestroProgramParseContext,
+): NonNullable<MaestroRepeatCommand['while']> {
+  const entries = readMapEntries(node, 'repeat.while', context);
+  assertOnlyKeys(entries, 'repeat.while', ['visible', 'notVisible'], context);
+  if (hasEntry(entries, 'visible')) {
+    return {
+      mode: 'visible',
+      selector: parseMaestroSelector(
+        entryValue(entries, 'visible'),
+        'repeat.while.visible',
+        context,
+      ),
+    };
+  }
+  if (hasEntry(entries, 'notVisible')) {
+    return {
+      mode: 'notVisible',
+      selector: parseMaestroSelector(
+        entryValue(entries, 'notVisible'),
+        'repeat.while.notVisible',
+        context,
+      ),
+    };
+  }
+  invalidAt('Maestro repeat.while requires a visible or notVisible condition.', node, context);
 }
 
 export function parseMaestroRetryCommand(

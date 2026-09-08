@@ -9,7 +9,9 @@ import {
   type MaestroRuntimePort,
 } from '@agent-device/maestro';
 import { registerDiagnosticSensitiveValue } from '@agent-device/host-kit/diagnostics';
+import { AppError } from '@agent-device/kernel/errors';
 import { stripUndefined } from '@agent-device/kernel/record';
+import { addMaestroMediaFiles } from './add-media.ts';
 import { executeRunScriptFile } from './run-script-execution.ts';
 import { waitForMaestroAnimationToEnd } from './wait-for-animation-to-end.ts';
 import {
@@ -116,6 +118,9 @@ function createDaemonMaestroRuntimeParts(options: CreateDaemonMaestroRuntimeOper
       ];
       const clearState = input.clearState === true;
       const relaunch = !clearState && input.stopApp !== false;
+      if (input.clearKeychain === true) {
+        await invokeMutation({ kind: 'clearKeychain' }, context);
+      }
       await invokeMutation(
         {
           kind: 'launchApp',
@@ -136,6 +141,9 @@ function createDaemonMaestroRuntimeParts(options: CreateDaemonMaestroRuntimeOper
       const appId = input.appId ?? context.appId;
       await invokeMutation({ kind: 'clearState', ...(appId ? { appId } : {}) }, context);
     },
+    clearKeychain: async (_input, context) => {
+      await invokeMutation({ kind: 'clearKeychain' }, context);
+    },
     openLink: async (input, context) => {
       await invokeMutation(
         {
@@ -146,6 +154,25 @@ function createDaemonMaestroRuntimeParts(options: CreateDaemonMaestroRuntimeOper
         },
         context,
         'deferred',
+      );
+    },
+    addMedia: async (input, context) => {
+      const device = options.device;
+      if (!device) {
+        throw new AppError(
+          'COMMAND_FAILED',
+          'Maestro addMedia requires a resolved session device.',
+        );
+      }
+      await withMutation(
+        () =>
+          addMaestroMediaFiles({
+            device,
+            platform,
+            files: input.files,
+            sourcePath: context.source?.path ?? options.sourcePath,
+          }),
+        context,
       );
     },
 
