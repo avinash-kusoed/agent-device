@@ -97,8 +97,28 @@ the strategy owns which tiers it may use.
   **sparse** capture reports that no backend could read the screen and points you at `screenshot`
   as visual truth plus coordinate taps. Use `--json` and read `snapshotQuality` when you need the
   state, backend, and reason behind **degraded** output.
+- A **sparse** `snapshot` takes that screenshot for you and returns its path as
+  `fallbackScreenshotPath`, so the visual fallback costs no extra command. Remote clients download
+  the image through the normal artifact channel before exposing that path. When the screen was
+  reachable but published no accessibility content at all, the warning also names it as a likely app
+  accessibility bug — assistive technologies get the same empty tree. Reasons that describe a limit
+  of this tool instead (a refused or budget-exhausted capture) are not attributed to the app.
 - `--raw` uses the **raw diagnostic strategy**: it stays tree-first and preserves strict capture
   failures, so a real XCTest accessibility serialization error surfaces as an error rather than as
   an empty tree.
 - Private-accessibility recovery and `--actions` reads are simulator-specific. Physical iOS devices
   have no equivalent independent semantic backend; they bound the XCTest work with a probe instead.
+
+## Android field metadata
+
+Android snapshot nodes and `get attrs` (including the digest response) carry the native
+`editable`, `password`, `hintShowing`, `selectionStart`, and `selectionEnd` facts whenever the
+accessibility tree reports them. Explicit `false` and `0` are kept; an absent field means the fact
+was unavailable, not false. `hintShowing` needs Android API 26 or later.
+
+- `value: ""` is an explicitly empty accessibility text; a missing `value` means no text was
+  reported. The text of an empty field is its hint on modern Android, so check `hintShowing`
+  before reading `value` as the entered contents.
+- `selectionStart`/`selectionEnd` are accessibility selection offsets. They are independent of
+  `editable` (read-only selectable text exposes them too), they are not a character count, and
+  they do not prove that a masked or secure value equals expected text.

@@ -16,7 +16,7 @@ When a session is established, human output includes a `Session state: <path>` l
 Session artifact directories contain per-run evidence for concurrent agents:
 
 - `requests/<request-id>.ndjson` - daemon request diagnostics for this session.
-- `events.ndjson` - session event timeline for requests and recorded actions.
+- `events.ndjson` - session event timeline for requests and recorded actions; rotates to `events.ndjson.1` past 5 MB (`AGENT_DEVICE_EVENT_LOG_MAX_BYTES`, whole bytes), with `events.ndjson.window.json` recording each retained generation's first absolute line index, line count, and first-line digest so `events` cursors stay absolute and are verified against the files on disk.
 - `runner.log` - Apple runner and `xcodebuild` build/start output for this session.
 - `app.log` - app/device logs when `logs start` or `logs clear --restart` is active.
 
@@ -42,6 +42,12 @@ Shut down the simulator/emulator on close (Apple simulators and Android emulator
 
 ```bash
 agent-device close --shutdown
+```
+
+A never-booted iOS Simulator can take several minutes to finish its first boot. Give `open` (or `prepare ios-runner`) a startup budget that covers it; the session's device claim is held from the first `open` onward, so a competing workspace sees `DEVICE_IN_USE` throughout:
+
+```bash
+agent-device open Settings --platform ios --udid <udid> --timeout 600000
 ```
 
 Notes:
