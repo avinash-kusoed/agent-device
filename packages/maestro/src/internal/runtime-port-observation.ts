@@ -53,7 +53,10 @@ export function maestroObservationMatches(
 
 export async function resolveMaestroTarget(
   selector: MaestroSelector,
-  query: Pick<MaestroTargetQuery, 'purpose' | 'timeoutMs'>,
+  query: Pick<
+    MaestroTargetQuery,
+    'purpose' | 'timeoutMs' | 'allowAtomicSelectorDispatch' | 'includeSurfaceSignature'
+  >,
   request: MaestroRuntimeRequest,
   operations: MaestroRuntimeOperations,
 ): Promise<MaestroTargetResolution> {

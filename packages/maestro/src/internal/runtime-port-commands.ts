@@ -30,10 +30,24 @@ type MaestroCommandOf<K extends MaestroRuntimeCommand['kind']> = Extract<
 >;
 
 type MaestroLifecycleCommand = MaestroCommandOf<
-  'launchApp' | 'stopApp' | 'clearState' | 'clearKeychain' | 'openLink' | 'addMedia'
+  | 'launchApp'
+  | 'stopApp'
+  | 'killApp'
+  | 'clearState'
+  | 'clearKeychain'
+  | 'openLink'
+  | 'addMedia'
+  | 'setLocation'
+  | 'setOrientation'
+  | 'setAirplaneMode'
+  | 'toggleAirplaneMode'
+  | 'setPermissions'
+  | 'travel'
 >;
 type MaestroTargetCommand = MaestroCommandOf<'tapOn' | 'doubleTapOn' | 'longPressOn'>;
-type MaestroTextCommand = MaestroCommandOf<'inputText' | 'eraseText'>;
+type MaestroTextCommand = MaestroCommandOf<
+  'inputText' | 'eraseText' | 'copyTextFrom' | 'setClipboard' | 'pasteText' | 'inputRandom'
+>;
 type MaestroNavigationCommand = MaestroCommandOf<
   'scroll' | 'scrollUntilVisible' | 'hideKeyboard' | 'pressKey' | 'back' | 'waitForAnimationToEnd'
 >;
@@ -55,16 +69,27 @@ type MaestroRuntimeCommandHandlers = {
 const MAESTRO_RUNTIME_COMMAND_HANDLERS = {
   launchApp: executeLifecycleCommand,
   stopApp: executeLifecycleCommand,
+  killApp: executeLifecycleCommand,
   clearState: executeLifecycleCommand,
   clearKeychain: executeLifecycleCommand,
   openLink: executeLifecycleCommand,
   addMedia: executeLifecycleCommand,
+  setLocation: executeLifecycleCommand,
+  setOrientation: executeLifecycleCommand,
+  setAirplaneMode: executeLifecycleCommand,
+  toggleAirplaneMode: executeLifecycleCommand,
+  setPermissions: executeLifecycleCommand,
+  travel: executeLifecycleCommand,
   tapOn: executeTargetCommand,
   doubleTapOn: executeTargetCommand,
   longPressOn: executeTargetCommand,
   swipe: executeSwipeCommand,
   inputText: executeTextCommand,
   eraseText: executeTextCommand,
+  copyTextFrom: executeTextCommand,
+  setClipboard: executeTextCommand,
+  pasteText: executeTextCommand,
+  inputRandom: executeTextCommand,
   scroll: executeNavigationCommand,
   scrollUntilVisible: executeNavigationCommand,
   hideKeyboard: executeNavigationCommand,
@@ -82,16 +107,27 @@ const MAESTRO_RUNTIME_COMMAND_HANDLERS = {
 const MAESTRO_COMMAND_REQUIRES_SETTLED_PREDECESSOR = {
   launchApp: true,
   stopApp: true,
+  killApp: true,
   clearState: true,
   clearKeychain: true,
   openLink: true,
   addMedia: true,
+  setLocation: true,
+  setOrientation: true,
+  setAirplaneMode: true,
+  toggleAirplaneMode: true,
+  setPermissions: true,
+  travel: true,
   tapOn: true,
   doubleTapOn: true,
   longPressOn: true,
   swipe: true,
   inputText: true,
   eraseText: true,
+  copyTextFrom: true,
+  setClipboard: true,
+  pasteText: true,
+  inputRandom: true,
   scroll: true,
   scrollUntilVisible: true,
   hideKeyboard: true,
@@ -173,7 +209,68 @@ async function executeLifecycleCommand(
         context,
         'invalidate',
       );
+    case 'killApp':
+      return await invokeOperation(
+        operations.killApp,
+        { appId: command.appId ?? request.appId },
+        context,
+        'invalidate',
+      );
+    case 'setLocation':
+      return await invokeOperation(
+        operations.setLocation,
+        {
+          latitude: requireResolvedCoordinate(command.latitude, 'setLocation.latitude'),
+          longitude: requireResolvedCoordinate(command.longitude, 'setLocation.longitude'),
+        },
+        context,
+        'invalidate',
+      );
+    case 'setOrientation':
+      return await invokeOperation(
+        operations.setOrientation,
+        { orientation: command.orientation },
+        context,
+        'invalidate',
+      );
+    case 'setAirplaneMode':
+      return await invokeOperation(
+        operations.setAirplaneMode,
+        { value: command.value },
+        context,
+        'invalidate',
+      );
+    case 'toggleAirplaneMode':
+      return await invokeOperation(operations.toggleAirplaneMode, {}, context, 'invalidate');
+    case 'setPermissions':
+      return await invokeOperation(
+        operations.setPermissions,
+        {
+          appId: command.appId ?? request.appId,
+          grants: command.grants,
+        },
+        context,
+        'invalidate',
+      );
+    case 'travel':
+      return await invokeOperation(
+        operations.travel,
+        stripUndefined({
+          points: command.points,
+          speedMps: resolveNumeric(command.speed, 'travel.speed'),
+        }),
+        context,
+        'invalidate',
+      );
   }
+}
+
+function requireResolvedCoordinate(value: number | string, name: string): number {
+  const resolved = resolveNumeric(value, name);
+  if (resolved === undefined) {
+    throw new AppError('INVALID_ARGS', `Maestro ${name} must resolve to a number.`);
+  }
+  return resolved;
 }
 
 function launchAppInput(command: MaestroCommandOf<'launchApp'>, request: MaestroRuntimeRequest) {
@@ -202,6 +299,7 @@ async function executeTargetCommand(
         {
           purpose: 'doubleTap',
           timeoutMs: targetLookupTimeout(command),
+          ...(command.retryTapIfNoChange === true ? { includeSurfaceSignature: true } : {}),
         },
         request,
         operations,
@@ -211,7 +309,11 @@ async function executeTargetCommand(
         MAESTRO_COMPATIBILITY_PRESETS.command.repeatDelayMs;
       return await invokeOperation(
         operations.doubleTapOn,
-        { target, delay },
+        stripUndefined({
+          target,
+          delay,
+          retryTapIfNoChange: command.retryTapIfNoChange,
+        }),
         context,
         'invalidate',
         target.resolution ? observationForTarget(target.resolution) : undefined,
@@ -277,6 +379,7 @@ function targetLookupTimeout(command: { readonly optional?: boolean }): number {
 function tapOnInput(command: MaestroCommandOf<'tapOn'>, target: MaestroInputTarget) {
   const repeat = resolveNumeric(command.repeat, 'tapOn.repeat');
   const delay = resolveNumeric(command.delay, 'tapOn.delay');
+  const settleTimeoutMs = resolveNumeric(command.waitToSettleTimeoutMs, 'tapOn.waitToSettleTimeoutMs');
   const effectiveDelay =
     repeat === undefined ? delay : (delay ?? MAESTRO_COMPATIBILITY_PRESETS.command.repeatDelayMs);
   return stripUndefined({
@@ -284,6 +387,7 @@ function tapOnInput(command: MaestroCommandOf<'tapOn'>, target: MaestroInputTarg
     retryTapIfNoChange: command.retryTapIfNoChange,
     repeat,
     delay: effectiveDelay,
+    settleTimeoutMs,
   });
 }
 
@@ -308,7 +412,7 @@ async function executeSwipeCommand(
 
 async function executeTextCommand(
   command: MaestroTextCommand,
-  _request: MaestroRuntimeRequest,
+  request: MaestroRuntimeRequest,
   operations: MaestroRuntimeOperations,
   context: MaestroRuntimeOperationContext,
 ): Promise<MaestroRuntimeResult> {
@@ -328,6 +432,43 @@ async function executeTextCommand(
             command.charactersToErase,
             'eraseText.charactersToErase',
           ),
+        }),
+        context,
+        'invalidate',
+      );
+    case 'copyTextFrom': {
+      const target = await resolveInputTarget(
+        { space: 'target', selector: command.target },
+        {
+          purpose: 'tap',
+          timeoutMs: MAESTRO_COMPATIBILITY_PRESETS.command.targetLookupTimeoutMs,
+        },
+        request,
+        operations,
+      );
+      return await invokeOperation(
+        operations.copyTextFrom,
+        { target },
+        context,
+        'invalidate',
+        target.resolution ? observationForTarget(target.resolution) : undefined,
+      );
+    }
+    case 'setClipboard':
+      return await invokeOperation(
+        operations.setClipboard,
+        { text: command.text },
+        context,
+        'invalidate',
+      );
+    case 'pasteText':
+      return await invokeOperation(operations.pasteText, {}, context, 'invalidate');
+    case 'inputRandom':
+      return await invokeOperation(
+        operations.inputRandom,
+        stripUndefined({
+          inputType: command.inputType,
+          length: resolveNumeric(command.length, 'inputRandom.length'),
         }),
         context,
         'invalidate',
@@ -373,15 +514,19 @@ async function executeNavigationCommand(
 }
 
 function scrollUntilVisibleInput(command: MaestroCommandOf<'scrollUntilVisible'>) {
+  const speed =
+    resolveNumeric(command.speed, 'scrollUntilVisible.speed') ??
+    MAESTRO_COMPATIBILITY_PRESETS.command.scrollUntilVisibleSpeed;
   return {
     selector: command.element,
     direction: command.direction ?? 'down',
     timeoutMs:
       resolveNumeric(command.timeout, 'scrollUntilVisible.timeout') ??
       MAESTRO_COMPATIBILITY_PRESETS.command.scrollUntilVisibleTimeoutMs,
-    durationMs: maestroScrollDurationFromSpeed(
-      MAESTRO_COMPATIBILITY_PRESETS.command.scrollUntilVisibleSpeed,
-    ),
+    durationMs: maestroScrollDurationFromSpeed(speed),
+    visibilityPercentage:
+      resolveNumeric(command.visibilityPercentage, 'scrollUntilVisible.visibilityPercentage') ??
+      MAESTRO_COMPATIBILITY_PRESETS.command.scrollUntilVisiblePercentage,
   };
 }
 
@@ -506,7 +651,10 @@ function optionalData(
 
 async function resolveInputTarget(
   authored: MaestroGestureTarget,
-  query: Pick<MaestroTargetQuery, 'purpose' | 'timeoutMs'>,
+  query: Pick<
+    MaestroTargetQuery,
+    'purpose' | 'timeoutMs' | 'allowAtomicSelectorDispatch' | 'includeSurfaceSignature'
+  >,
   request: MaestroRuntimeRequest,
   operations: MaestroRuntimeOperations,
 ): Promise<MaestroInputTarget> {

@@ -42,6 +42,19 @@ import {
   parseMaestroRunScriptCommand,
 } from './program-ir-flow-parser.ts';
 import {
+  parseCopyTextFrom,
+  parseInputRandom,
+  parseKillApp,
+  parsePasteText,
+  parseSetAirplaneMode,
+  parseSetClipboard,
+  parseSetLocation,
+  parseSetOrientation,
+  parseSetPermissions,
+  parseToggleAirplaneMode,
+  parseTravel,
+} from './program-ir-device-parser.ts';
+import {
   assertOnlyKeys,
   entryValue,
   hasEntry,
@@ -129,6 +142,26 @@ const COMMAND_VALUE_PARSERS: Readonly<Record<string, CommandValueParser>> = {
   clearState: parseClearState,
   clearKeychain: parseClearKeychain,
   addMedia: parseAddMedia,
+  killApp: parseKillApp,
+  setLocation: parseSetLocation,
+  setOrientation: parseSetOrientation,
+  setAirplaneMode: parseSetAirplaneMode,
+  toggleAirplaneMode: parseToggleAirplaneMode,
+  setPermissions: parseSetPermissions,
+  copyTextFrom: parseCopyTextFrom,
+  setClipboard: parseSetClipboard,
+  pasteText: parsePasteText,
+  travel: parseTravel,
+  inputRandomText: (value, node, context) => parseInputRandom('text', value, node, context),
+  inputRandomNumber: (value, node, context) => parseInputRandom('number', value, node, context),
+  inputRandomEmail: (value, node, context) => parseInputRandom('email', value, node, context),
+  inputRandomPersonName: (value, node, context) =>
+    parseInputRandom('personName', value, node, context),
+  inputRandomCityName: (value, node, context) => parseInputRandom('cityName', value, node, context),
+  inputRandomCountryName: (value, node, context) =>
+    parseInputRandom('countryName', value, node, context),
+  inputRandomColorName: (value, node, context) =>
+    parseInputRandom('colorName', value, node, context),
   runScript: parseMaestroRunScriptCommand,
   runFlow: (value, node, context) =>
     parseMaestroRunFlowCommand(value, node, context, parseMaestroCommandList),
@@ -364,7 +397,7 @@ function parseScrollUntilVisible(
   assertOnlyKeys(
     entries,
     'scrollUntilVisible',
-    ['element', 'direction', 'timeout', 'optional', 'label'],
+    ['element', 'direction', 'timeout', 'speed', 'visibilityPercentage', 'optional', 'label'],
     context,
   );
   const options = readOptionalCommandOption(entries, 'scrollUntilVisible', context);
@@ -387,6 +420,16 @@ function parseScrollUntilVisible(
   const timeout = hasEntry(entries, 'timeout')
     ? readOptionalNumeric(entryValue(entries, 'timeout'), 'scrollUntilVisible.timeout', context)
     : undefined;
+  const speed = hasEntry(entries, 'speed')
+    ? readOptionalNumeric(entryValue(entries, 'speed'), 'scrollUntilVisible.speed', context)
+    : undefined;
+  const visibilityPercentage = hasEntry(entries, 'visibilityPercentage')
+    ? readOptionalNumeric(
+        entryValue(entries, 'visibilityPercentage'),
+        'scrollUntilVisible.visibilityPercentage',
+        context,
+      )
+    : undefined;
   const optional = options.optional === true || parsedElement!.optional === true ? true : undefined;
   return stripUndefined({
     kind: 'scrollUntilVisible' as const,
@@ -394,6 +437,8 @@ function parseScrollUntilVisible(
     element: parsedElement!.selector,
     direction,
     timeout,
+    speed,
+    visibilityPercentage,
     optional,
     label,
   });
@@ -414,9 +459,21 @@ function parsePressKey(
   commandNode: Node,
   context: MaestroProgramParseContext,
 ): MaestroPressKeyCommand {
-  const key = readRequiredString(value, 'pressKey', context).toLowerCase();
-  if (key !== 'back' && key !== 'enter' && key !== 'return' && key !== 'home')
-    invalidAt(`Maestro pressKey "${key}" is not supported.`, value, context);
+  const key = readRequiredString(value, 'pressKey', context).toLowerCase().replace(/\s+/g, '');
+  if (
+    key !== 'back' &&
+    key !== 'enter' &&
+    key !== 'return' &&
+    key !== 'home' &&
+    key !== 'backspace' &&
+    key !== 'tab'
+  ) {
+    invalidAt(
+      `Maestro pressKey "${key}" is not supported. Supported keys: back, enter, return, home, backspace, tab.`,
+      value,
+      context,
+    );
+  }
   return { kind: 'pressKey', source: sourceAt(commandNode, context), key };
 }
 

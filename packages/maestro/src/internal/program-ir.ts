@@ -67,6 +67,7 @@ export type MaestroTapOnCommand = MaestroOptionalCommand & {
   retryTapIfNoChange?: boolean;
   repeat?: number | string;
   delay?: number | string;
+  waitToSettleTimeoutMs?: number | string;
   label?: string;
 };
 
@@ -75,6 +76,7 @@ export type MaestroDoubleTapOnCommand = MaestroOptionalCommand & {
   source: MaestroSourceLocation;
   target: MaestroGestureTarget;
   delay?: number | string;
+  retryTapIfNoChange?: boolean;
   label?: string;
 };
 
@@ -177,6 +179,8 @@ export type MaestroScrollUntilVisibleCommand = MaestroOptionalCommand & {
   element: MaestroSelector;
   direction?: MaestroDirection;
   timeout?: number | string;
+  speed?: number | string;
+  visibilityPercentage?: number | string;
   label?: string;
 };
 
@@ -185,10 +189,12 @@ export type MaestroHideKeyboardCommand = {
   source: MaestroSourceLocation;
 };
 
+export type MaestroPressKeyName = 'back' | 'enter' | 'return' | 'home' | 'backspace' | 'tab';
+
 export type MaestroPressKeyCommand = {
   kind: 'pressKey';
   source: MaestroSourceLocation;
-  key: 'back' | 'enter' | 'return' | 'home';
+  key: MaestroPressKeyName;
 };
 
 export type MaestroBackCommand = {
@@ -223,6 +229,125 @@ export type MaestroAddMediaCommand = {
   kind: 'addMedia';
   source: MaestroSourceLocation;
   files: string[];
+};
+
+export type MaestroKillAppCommand = {
+  kind: 'killApp';
+  source: MaestroSourceLocation;
+  appId?: string;
+};
+
+export type MaestroSetLocationCommand = {
+  kind: 'setLocation';
+  source: MaestroSourceLocation;
+  latitude: number | string;
+  longitude: number | string;
+};
+
+export type MaestroOrientationName =
+  | 'portrait'
+  | 'landscape-left'
+  | 'landscape-right'
+  | 'portrait-upside-down';
+
+export type MaestroSetOrientationCommand = {
+  kind: 'setOrientation';
+  source: MaestroSourceLocation;
+  orientation: MaestroOrientationName;
+};
+
+export type MaestroAirplaneModeValue = 'enabled' | 'disabled';
+
+export type MaestroSetAirplaneModeCommand = {
+  kind: 'setAirplaneMode';
+  source: MaestroSourceLocation;
+  value: MaestroAirplaneModeValue;
+};
+
+export type MaestroToggleAirplaneModeCommand = {
+  kind: 'toggleAirplaneMode';
+  source: MaestroSourceLocation;
+};
+
+export type MaestroPermissionAction = 'grant' | 'deny' | 'reset';
+
+export type MaestroPermissionTarget =
+  | 'camera'
+  | 'microphone'
+  | 'photos'
+  | 'contacts'
+  | 'contacts-limited'
+  | 'notifications'
+  | 'calendar'
+  | 'location'
+  | 'location-always'
+  | 'media-library'
+  | 'motion'
+  | 'reminders'
+  | 'siri'
+  | 'accessibility'
+  | 'screen-recording'
+  | 'input-monitoring';
+
+export type MaestroPermissionGrant = {
+  target: MaestroPermissionTarget;
+  action: MaestroPermissionAction;
+};
+
+export type MaestroSetPermissionsCommand = {
+  kind: 'setPermissions';
+  source: MaestroSourceLocation;
+  appId?: string;
+  grants: MaestroPermissionGrant[];
+};
+
+export type MaestroCopyTextFromCommand = {
+  kind: 'copyTextFrom';
+  source: MaestroSourceLocation;
+  target: MaestroSelector;
+  label?: string;
+};
+
+export type MaestroSetClipboardCommand = {
+  kind: 'setClipboard';
+  source: MaestroSourceLocation;
+  text: string;
+  label?: string;
+};
+
+export type MaestroPasteTextCommand = {
+  kind: 'pasteText';
+  source: MaestroSourceLocation;
+  label?: string;
+};
+
+export type MaestroTravelPoint = {
+  latitude: number | string;
+  longitude: number | string;
+};
+
+export type MaestroTravelCommand = {
+  kind: 'travel';
+  source: MaestroSourceLocation;
+  points: MaestroTravelPoint[];
+  speed?: number | string;
+};
+
+export type MaestroInputRandomType =
+  | 'text'
+  | 'number'
+  | 'email'
+  | 'personName'
+  | 'cityName'
+  | 'countryName'
+  | 'colorName';
+
+export type MaestroInputRandomCommand = {
+  kind: 'inputRandom';
+  source: MaestroSourceLocation;
+  inputType: MaestroInputRandomType;
+  length?: number | string;
+  label?: string;
 };
 
 export type MaestroRunScriptCommand = {
@@ -292,6 +417,17 @@ export type MaestroCommand =
   | MaestroClearStateCommand
   | MaestroClearKeychainCommand
   | MaestroAddMediaCommand
+  | MaestroKillAppCommand
+  | MaestroSetLocationCommand
+  | MaestroSetOrientationCommand
+  | MaestroSetAirplaneModeCommand
+  | MaestroToggleAirplaneModeCommand
+  | MaestroSetPermissionsCommand
+  | MaestroCopyTextFromCommand
+  | MaestroSetClipboardCommand
+  | MaestroPasteTextCommand
+  | MaestroTravelCommand
+  | MaestroInputRandomCommand
   | MaestroRunScriptCommand
   | MaestroRunFlowCommand
   | MaestroRepeatCommand

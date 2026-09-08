@@ -1,12 +1,18 @@
 import type { Point, Rect } from '@agent-device/kernel/snapshot';
 import type {
+  MaestroAirplaneModeValue,
   MaestroDirection,
   MaestroGestureTarget,
+  MaestroInputRandomType,
   MaestroLaunchArguments,
+  MaestroOrientationName,
+  MaestroPermissionGrant,
   MaestroPlatform,
+  MaestroPressKeyName,
   MaestroSelector,
   MaestroSourceLocation,
   MaestroSwipeGesture,
+  MaestroTravelPoint,
 } from './program-ir.ts';
 import type {
   MaestroObservation,
@@ -124,20 +130,45 @@ export type MaestroRuntimeOperations = {
     readonly launchArguments?: MaestroLaunchArguments;
   }>;
   readonly stopApp: MaestroRuntimeOperation<{ readonly appId?: string }>;
+  readonly killApp: MaestroRuntimeOperation<{ readonly appId?: string }>;
   readonly clearState: MaestroRuntimeOperation<{ readonly appId?: string }>;
   readonly clearKeychain: MaestroRuntimeOperation<Record<string, never>>;
   readonly openLink: MaestroRuntimeOperation<{ readonly link: string }>;
   readonly addMedia: MaestroRuntimeOperation<{ readonly files: readonly string[] }>;
+  readonly setLocation: MaestroRuntimeOperation<{
+    readonly latitude: number;
+    readonly longitude: number;
+  }>;
+  readonly setOrientation: MaestroRuntimeOperation<{ readonly orientation: MaestroOrientationName }>;
+  readonly setAirplaneMode: MaestroRuntimeOperation<{ readonly value: MaestroAirplaneModeValue }>;
+  readonly toggleAirplaneMode: MaestroRuntimeOperation<Record<string, never>>;
+  readonly setPermissions: MaestroRuntimeOperation<{
+    readonly appId?: string;
+    readonly grants: readonly MaestroPermissionGrant[];
+  }>;
+  readonly copyTextFrom: MaestroRuntimeOperation<{ readonly target: MaestroInputTarget }>;
+  readonly setClipboard: MaestroRuntimeOperation<{ readonly text: string }>;
+  readonly pasteText: MaestroRuntimeOperation<Record<string, never>>;
+  readonly travel: MaestroRuntimeOperation<{
+    readonly points: readonly MaestroTravelPoint[];
+    readonly speedMps?: number;
+  }>;
+  readonly inputRandom: MaestroRuntimeOperation<{
+    readonly inputType: MaestroInputRandomType;
+    readonly length?: number;
+  }>;
 
   readonly tapOn: MaestroRuntimeOperation<{
     readonly target: MaestroInputTarget;
     readonly retryTapIfNoChange?: boolean;
     readonly repeat?: number;
     readonly delay?: number;
+    readonly settleTimeoutMs?: number;
   }>;
   readonly doubleTapOn: MaestroRuntimeOperation<{
     readonly target: MaestroInputTarget;
     readonly delay?: number;
+    readonly retryTapIfNoChange?: boolean;
   }>;
   readonly longPressOn: MaestroRuntimeOperation<{ readonly target: MaestroInputTarget }>;
   readonly gesture: MaestroRuntimeOperation<MaestroSinglePointerGestureInput>;
@@ -149,9 +180,10 @@ export type MaestroRuntimeOperations = {
     readonly direction: MaestroDirection;
     readonly timeoutMs: number;
     readonly durationMs: number;
+    readonly visibilityPercentage: number;
   }>;
   readonly pressKey: MaestroRuntimeOperation<{
-    readonly key: 'back' | 'enter' | 'return' | 'home';
+    readonly key: MaestroPressKeyName;
   }>;
   readonly back: MaestroRuntimeOperation<Record<string, never>>;
   readonly hideKeyboard: MaestroRuntimeOperation<Record<string, never>>;
