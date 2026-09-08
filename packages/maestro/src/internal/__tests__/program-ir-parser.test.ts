@@ -496,6 +496,48 @@ describe('parseMaestroProgram', () => {
     });
   });
 
+  test('parses clearKeychain, launchApp.clearKeychain, addMedia, and repeat.while', () => {
+    const program = parseMaestroProgram(
+      `appId: example.app
+---
+- clearKeychain
+- launchApp:
+    clearKeychain: true
+- addMedia:
+    - photo.jpg
+    - video.mp4
+- repeat:
+    while:
+      visible: Loading
+    commands:
+      - tapOn: Retry
+`,
+      { sourcePath: '/flows/media.yaml' },
+    );
+
+    assert.deepEqual(program.commands[0], {
+      kind: 'clearKeychain',
+      source: { path: '/flows/media.yaml', line: 3 },
+    });
+    assert.equal(program.commands[1]?.kind, 'launchApp');
+    assert.equal(
+      program.commands[1] && 'clearKeychain' in program.commands[1]
+        ? program.commands[1].clearKeychain
+        : undefined,
+      true,
+    );
+    assert.deepEqual(program.commands[2], {
+      kind: 'addMedia',
+      source: { path: '/flows/media.yaml', line: 6 },
+      files: ['photo.jpg', 'video.mp4'],
+    });
+    assert.equal(program.commands[3]?.kind, 'repeat');
+    assert.deepEqual(
+      program.commands[3] && 'while' in program.commands[3] ? program.commands[3].while : undefined,
+      { mode: 'visible', selector: { text: 'Loading' } },
+    );
+  });
+
   test('preserves source paths for unsupported and malformed flows', () => {
     const sourcePath = '/flows/includes/child.yaml';
     assert.throws(

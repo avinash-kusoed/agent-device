@@ -337,6 +337,7 @@ function createMaestroReplayPort(params: {
     invoke,
     platform,
     sourcePath,
+    ...(device ? { device } : {}),
     dependencies: {
       now: Date.now,
       sleep: async (milliseconds, abortSignal) => {

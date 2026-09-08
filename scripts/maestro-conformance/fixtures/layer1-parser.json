@@ -3220,6 +3220,37 @@
       }
     },
     {
+      "id": "authored/add-media",
+      "file": "authored/add-media.yaml",
+      "status": "parsed",
+      "commands": [
+        {
+          "type": "ApplyConfigurationCommand",
+          "fields": {
+            "config": {
+              "appId": "com.example.app",
+              "name": null,
+              "tags": [],
+              "ext": {},
+              "onFlowStart": null,
+              "onFlowComplete": null,
+              "properties": {}
+            },
+            "label": null,
+            "optional": false
+          }
+        },
+        {
+          "type": "AddMediaCommand",
+          "fields": {
+            "mediaPaths": ["<corpus>/authored/photo.jpg", "<corpus>/authored/video.mp4"],
+            "label": null,
+            "optional": false
+          }
+        }
+      ]
+    },
+    {
       "id": "authored/clear-state",
       "file": "authored/clear-state.yaml",
       "status": "parsed",
@@ -4343,6 +4374,253 @@
       ]
     },
     {
+      "id": "authored/repeat-while",
+      "file": "authored/repeat-while.yaml",
+      "status": "parsed",
+      "commands": [
+        {
+          "type": "ApplyConfigurationCommand",
+          "fields": {
+            "config": {
+              "appId": "com.example.app",
+              "name": null,
+              "tags": [],
+              "ext": {},
+              "onFlowStart": null,
+              "onFlowComplete": null,
+              "properties": {}
+            },
+            "label": null,
+            "optional": false
+          }
+        },
+        {
+          "type": "RepeatCommand",
+          "fields": {
+            "times": null,
+            "condition": {
+              "platform": null,
+              "visible": {
+                "textRegex": "Loading",
+                "idRegex": null,
+                "size": null,
+                "below": null,
+                "above": null,
+                "leftOf": null,
+                "rightOf": null,
+                "containsChild": null,
+                "containsDescendants": null,
+                "traits": null,
+                "index": null,
+                "enabled": null,
+                "optional": false,
+                "selected": null,
+                "checked": null,
+                "focused": null,
+                "childOf": null,
+                "css": null
+              },
+              "notVisible": null,
+              "scriptCondition": null,
+              "label": null
+            },
+            "commands": [
+              {
+                "tapOnElement": {
+                  "selector": {
+                    "textRegex": "Retry",
+                    "idRegex": null,
+                    "size": null,
+                    "below": null,
+                    "above": null,
+                    "leftOf": null,
+                    "rightOf": null,
+                    "containsChild": null,
+                    "containsDescendants": null,
+                    "traits": null,
+                    "index": null,
+                    "enabled": null,
+                    "optional": false,
+                    "selected": null,
+                    "checked": null,
+                    "focused": null,
+                    "childOf": null,
+                    "css": null
+                  },
+                  "retryIfNoChange": false,
+                  "waitUntilVisible": false,
+                  "longPress": false,
+                  "repeat": null,
+                  "waitToSettleTimeoutMs": null,
+                  "relativePoint": null,
+                  "label": null,
+                  "optional": false
+                },
+                "tapOnPoint": null,
+                "tapOnPointV2Command": null,
+                "scrollCommand": null,
+                "swipeCommand": null,
+                "backPressCommand": null,
+                "assertCommand": null,
+                "assertConditionCommand": null,
+                "assertScreenshotCommand": null,
+                "assertNoDefectsWithAICommand": null,
+                "assertWithAICommand": null,
+                "extractTextWithAICommand": null,
+                "inputTextCommand": null,
+                "inputRandomTextCommand": null,
+                "launchAppCommand": null,
+                "setPermissionsCommand": null,
+                "applyConfigurationCommand": null,
+                "openLinkCommand": null,
+                "pressKeyCommand": null,
+                "eraseTextCommand": null,
+                "hideKeyboardCommand": null,
+                "takeScreenshotCommand": null,
+                "stopAppCommand": null,
+                "killAppCommand": null,
+                "clearStateCommand": null,
+                "clearKeychainCommand": null,
+                "runFlowCommand": null,
+                "setLocationCommand": null,
+                "setOrientationCommand": null,
+                "repeatCommand": null,
+                "copyTextCommand": null,
+                "setClipboardCommand": null,
+                "pasteTextCommand": null,
+                "defineVariablesCommand": null,
+                "runScriptCommand": null,
+                "waitForAnimationToEndCommand": null,
+                "evalScriptCommand": null,
+                "scrollUntilVisible": null,
+                "travelCommand": null,
+                "startRecordingCommand": null,
+                "stopRecordingCommand": null,
+                "addMediaCommand": null,
+                "setAirplaneModeCommand": null,
+                "toggleAirplaneModeCommand": null,
+                "retryCommand": null
+              }
+            ],
+            "label": null,
+            "optional": false
+          }
+        },
+        {
+          "type": "RepeatCommand",
+          "fields": {
+            "times": null,
+            "condition": {
+              "platform": null,
+              "visible": null,
+              "notVisible": {
+                "textRegex": null,
+                "idRegex": "ready",
+                "size": null,
+                "below": null,
+                "above": null,
+                "leftOf": null,
+                "rightOf": null,
+                "containsChild": null,
+                "containsDescendants": null,
+                "traits": null,
+                "index": null,
+                "enabled": null,
+                "optional": false,
+                "selected": null,
+                "checked": null,
+                "focused": null,
+                "childOf": null,
+                "css": null
+              },
+              "scriptCondition": null,
+              "label": null
+            },
+            "commands": [
+              {
+                "tapOnElement": {
+                  "selector": {
+                    "textRegex": null,
+                    "idRegex": "wait",
+                    "size": null,
+                    "below": null,
+                    "above": null,
+                    "leftOf": null,
+                    "rightOf": null,
+                    "containsChild": null,
+                    "containsDescendants": null,
+                    "traits": null,
+                    "index": null,
+                    "enabled": null,
+                    "optional": false,
+                    "selected": null,
+                    "checked": null,
+                    "focused": null,
+                    "childOf": null,
+                    "css": null
+                  },
+                  "retryIfNoChange": false,
+                  "waitUntilVisible": false,
+                  "longPress": false,
+                  "repeat": null,
+                  "waitToSettleTimeoutMs": null,
+                  "relativePoint": null,
+                  "label": null,
+                  "optional": false
+                },
+                "tapOnPoint": null,
+                "tapOnPointV2Command": null,
+                "scrollCommand": null,
+                "swipeCommand": null,
+                "backPressCommand": null,
+                "assertCommand": null,
+                "assertConditionCommand": null,
+                "assertScreenshotCommand": null,
+                "assertNoDefectsWithAICommand": null,
+                "assertWithAICommand": null,
+                "extractTextWithAICommand": null,
+                "inputTextCommand": null,
+                "inputRandomTextCommand": null,
+                "launchAppCommand": null,
+                "setPermissionsCommand": null,
+                "applyConfigurationCommand": null,
+                "openLinkCommand": null,
+                "pressKeyCommand": null,
+                "eraseTextCommand": null,
+                "hideKeyboardCommand": null,
+                "takeScreenshotCommand": null,
+                "stopAppCommand": null,
+                "killAppCommand": null,
+                "clearStateCommand": null,
+                "clearKeychainCommand": null,
+                "runFlowCommand": null,
+                "setLocationCommand": null,
+                "setOrientationCommand": null,
+                "repeatCommand": null,
+                "copyTextCommand": null,
+                "setClipboardCommand": null,
+                "pasteTextCommand": null,
+                "defineVariablesCommand": null,
+                "runScriptCommand": null,
+                "waitForAnimationToEndCommand": null,
+                "evalScriptCommand": null,
+                "scrollUntilVisible": null,
+                "travelCommand": null,
+                "startRecordingCommand": null,
+                "stopRecordingCommand": null,
+                "addMediaCommand": null,
+                "setAirplaneModeCommand": null,
+                "toggleAirplaneModeCommand": null,
+                "retryCommand": null
+              }
+            ],
+            "label": null,
+            "optional": false
+          }
+        }
+      ]
+    },
+    {
       "id": "authored/repeat",
       "file": "authored/repeat.yaml",
       "status": "parsed",
@@ -5015,5 +5293,5 @@
       ]
     }
   ],
-  "contentHash": "3fab6cb48d4ac7ec2640faa223b86a1dd58439d1e181ce442a76a5f754efc725"
+  "contentHash": "a6270e648ee359edc6f6e9d82b7772bdbc5d06f72df5b9423ed60a9a00e41640"
 }

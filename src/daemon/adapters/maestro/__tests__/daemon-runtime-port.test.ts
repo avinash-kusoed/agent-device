@@ -168,6 +168,53 @@ test('projects standalone clearState to settings without opening the app', async
   ]);
 });
 
+test('projects clearKeychain and launchApp.clearKeychain before open', async () => {
+  const requests: DaemonRequest[] = [];
+  const invoke: DaemonInvokeFn = async (request) => {
+    requests.push(request);
+    return { ok: true, data: {} };
+  };
+  const port = createDaemonMaestroRuntimePort({
+    baseReq: makeBaseRequest({ flags: { platform: 'ios', replayBackend: 'maestro' } }),
+    invoke,
+    dependencies: makeDependencies(),
+    platform: 'ios',
+  });
+
+  await port.execute({
+    command: { kind: 'clearKeychain', source: { line: 2 } },
+    generation: 0,
+    env: {},
+    invalidateObservation() {},
+  });
+  await port.execute({
+    command: {
+      kind: 'launchApp',
+      source: { line: 3 },
+      appId: 'com.example.app',
+      clearKeychain: true,
+    },
+    generation: 1,
+    env: {},
+    invalidateObservation() {},
+  });
+
+  expect(requests).toEqual([
+    expect.objectContaining({
+      command: 'settings',
+      positionals: ['reset-keychain', 'clear'],
+    }),
+    expect.objectContaining({
+      command: 'settings',
+      positionals: ['reset-keychain', 'clear'],
+    }),
+    expect.objectContaining({
+      command: 'open',
+      positionals: ['com.example.app'],
+    }),
+  ]);
+});
+
 test('uses the direct viewport without snapshot and pairs it with the nested gesture request', async () => {
   const requests: DaemonRequest[] = [];
   const viewport = { x: 10, y: 20, width: 400, height: 800 };

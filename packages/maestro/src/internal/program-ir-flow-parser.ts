@@ -154,7 +154,11 @@ function parseRepeatWhileCondition(
   if (hasEntry(entries, 'visible')) {
     return {
       mode: 'visible',
-      selector: parseMaestroSelector(entryValue(entries, 'visible'), 'repeat.while.visible', context),
+      selector: parseMaestroSelector(
+        entryValue(entries, 'visible'),
+        'repeat.while.visible',
+        context,
+      ),
     };
   }
   if (hasEntry(entries, 'notVisible')) {

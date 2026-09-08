@@ -57,6 +57,10 @@ describe('Maestro public operation projection', () => {
       expected: { command: 'settings', positionals: ['clear-app-state'] },
     },
     {
+      operation: { kind: 'clearKeychain' },
+      expected: { command: 'settings', positionals: ['reset-keychain', 'clear'] },
+    },
+    {
       operation: {
         kind: 'openLink',
         appId: 'com.example',

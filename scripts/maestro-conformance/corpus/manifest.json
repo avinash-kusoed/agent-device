@@ -465,6 +465,14 @@
       }
     },
     {
+      "id": "authored/add-media",
+      "file": "authored/add-media.yaml",
+      "origin": {
+        "kind": "authored",
+        "note": "Coverage: standalone addMedia with a single path and a multi-file list (no upstream flow exercises it)."
+      }
+    },
+    {
       "id": "authored/clear-state",
       "file": "authored/clear-state.yaml",
       "origin": {
@@ -558,6 +566,14 @@
       "origin": {
         "kind": "authored",
         "note": "Coverage: pressKey supported keys (upstream 034 exercises many unsupported keycodes)."
+      }
+    },
+    {
+      "id": "authored/repeat-while",
+      "file": "authored/repeat-while.yaml",
+      "origin": {
+        "kind": "authored",
+        "note": "Coverage: repeat.while with visible and notVisible conditions (upstream repeat.while is JS-expression based)."
       }
     },
     {

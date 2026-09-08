@@ -242,7 +242,9 @@ async function executeRetry(
 
 async function executeRepeatWhile(
   steps: readonly MaestroReplayPlanStep[],
-  condition: NonNullable<Extract<MaestroReplayPlanOpaqueStep['command'], { kind: 'repeat' }>['while']>,
+  condition: NonNullable<
+    Extract<MaestroReplayPlanOpaqueStep['command'], { kind: 'repeat' }>['while']
+  >,
   state: MaestroReplayPlanExecutionState,
 ): Promise<void> {
   const maxIterations = MAESTRO_COMPATIBILITY_PRESETS.control.repeatWhileMaxIterations;

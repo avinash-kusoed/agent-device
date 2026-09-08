@@ -3,9 +3,9 @@ import { access } from 'node:fs/promises';
 import { AppError } from '@agent-device/kernel/errors';
 import { isIosFamily, type DeviceInfo } from '@agent-device/kernel/device';
 import { requireExecSuccess } from '@agent-device/host-kit/command';
-import { runAndroidAdb } from '@agent-device/platform-android';
-import { runSimctl } from '@agent-device/platform-apple/simctl';
-import { requireSimulatorDevice } from '@agent-device/platform-apple/simulator';
+import { runAndroidAdb } from '@agent-device/platform-android/mechanics';
+import { buildSimctlArgsForDevice } from '@agent-device/platform-apple/simctl';
+import { runXcrun } from '@agent-device/platform-apple/tool-provider';
 
 const ANDROID_MEDIA_DIR = '/sdcard/DCIM/Camera';
 
@@ -29,12 +29,14 @@ export async function addMaestroMediaFiles(params: {
 }
 
 async function addIosSimulatorMedia(device: DeviceInfo, files: readonly string[]): Promise<void> {
-  if (!isIosFamily(device)) {
-    throw new AppError('UNSUPPORTED_PLATFORM', 'Maestro addMedia on iOS requires an Apple device.');
+  if (!isIosFamily(device) || device.kind !== 'simulator') {
+    throw new AppError(
+      'UNSUPPORTED_OPERATION',
+      'Maestro addMedia is only supported on iOS simulators for Apple targets.',
+    );
   }
-  requireSimulatorDevice(device, 'addMedia');
   requireExecSuccess(
-    await runSimctl(device, ['addmedia', device.id, ...files]),
+    await runXcrun(buildSimctlArgsForDevice(device, ['addmedia', device.id, ...files])),
     'simctl addmedia failed',
   );
 }

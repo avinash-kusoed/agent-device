@@ -495,7 +495,8 @@ function parseAddMedia(
   }
   if (isSeq(value)) {
     const files = readStringSequence(value, 'addMedia', context);
-    if (files.length === 0) invalidAt('Maestro addMedia requires at least one file path.', value, context);
+    if (files.length === 0)
+      invalidAt('Maestro addMedia requires at least one file path.', value, context);
     return { kind: 'addMedia', source, files };
   }
   invalidAt('Maestro addMedia expects a file path string or list of file paths.', value, context);

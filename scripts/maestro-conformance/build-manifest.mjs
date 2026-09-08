@@ -56,6 +56,10 @@ const NOTES = {
     'Coverage: waitForAnimationToEnd timeout accepts a ${VAR} token and projects identically through the canonical model.',
   'authored/clear-state':
     'Coverage: standalone clearState with default and explicit appId (no upstream flow exercises it).',
+  'authored/add-media':
+    'Coverage: standalone addMedia with a single path and a multi-file list (no upstream flow exercises it).',
+  'authored/repeat-while':
+    'Coverage: repeat.while with visible and notVisible conditions (upstream repeat.while is JS-expression based).',
   'invalid/bad-swipe-direction': 'Lenient-guard: unknown SwipeDirection enum value.',
   'invalid/unknown-command': 'Lenient-guard: unknown command name (tapOn typo).',
   'invalid/malformed-selector': 'Lenient-guard: selector given as a sequence.',
