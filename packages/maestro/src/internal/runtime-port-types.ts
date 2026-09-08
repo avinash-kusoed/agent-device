@@ -119,12 +119,15 @@ export type MaestroRuntimeOperations = {
     readonly appId?: string;
     readonly stopApp?: boolean;
     readonly clearState?: boolean;
+    readonly clearKeychain?: boolean;
     readonly arguments?: MaestroLaunchArguments;
     readonly launchArguments?: MaestroLaunchArguments;
   }>;
   readonly stopApp: MaestroRuntimeOperation<{ readonly appId?: string }>;
   readonly clearState: MaestroRuntimeOperation<{ readonly appId?: string }>;
+  readonly clearKeychain: MaestroRuntimeOperation<Record<string, never>>;
   readonly openLink: MaestroRuntimeOperation<{ readonly link: string }>;
+  readonly addMedia: MaestroRuntimeOperation<{ readonly files: readonly string[] }>;
 
   readonly tapOn: MaestroRuntimeOperation<{
     readonly target: MaestroInputTarget;

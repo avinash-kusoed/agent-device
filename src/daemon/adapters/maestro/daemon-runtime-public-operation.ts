@@ -21,6 +21,7 @@ export type MaestroPublicOperation =
     }
   | { kind: 'stopApp'; appId?: string }
   | { kind: 'clearState'; appId?: string }
+  | { kind: 'clearKeychain' }
   | { kind: 'openLink'; appId?: string; link: string; prewarmRunner: boolean }
   | { kind: 'typeText'; text: string }
   | {
@@ -47,6 +48,7 @@ export function projectMaestroPublicOperation(
   operation: MaestroPublicOperation,
 ): ProjectedMaestroPublicOperation {
   if (operation.kind === 'clearState') return projectClearState(operation);
+  if (operation.kind === 'clearKeychain') return projectClearKeychain();
   if (isAppOperation(operation)) return projectAppOperation(operation);
   if (isCaptureOperation(operation)) return projectCaptureOperation(operation);
   return projectInputOperation(operation);
@@ -107,6 +109,13 @@ function projectClearState(
   };
 }
 
+function projectClearKeychain(): ProjectedMaestroPublicOperation {
+  return {
+    command: 'settings',
+    positionals: ['reset-keychain', 'clear'],
+  };
+}
+
 function projectOpenLink(
   operation: Extract<MaestroAppOperation, { kind: 'openLink' }>,
 ): ProjectedMaestroPublicOperation {
@@ -119,7 +128,7 @@ function projectOpenLink(
 
 type MaestroInputOperation = Exclude<
   MaestroPublicOperation,
-  MaestroAppOperation | MaestroCaptureOperation | { kind: 'clearState' }
+  MaestroAppOperation | MaestroCaptureOperation | { kind: 'clearState' } | { kind: 'clearKeychain' }
 >;
 
 function projectInputOperation(operation: MaestroInputOperation): ProjectedMaestroPublicOperation {

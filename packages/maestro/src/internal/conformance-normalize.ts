@@ -37,7 +37,13 @@ export type CanonicalGesture =
   | { mode: 'element'; from: CanonicalSelector; direction?: string; duration?: number | string };
 
 export type CanonicalCommand =
-  | { kind: 'launchApp'; appId?: string; clearState?: boolean; stopApp?: boolean }
+  | {
+      kind: 'launchApp';
+      appId?: string;
+      clearState?: boolean;
+      clearKeychain?: boolean;
+      stopApp?: boolean;
+    }
   // Upstream models `doubleTapOn` as a tap with repeat.repeat == 2, so the repeat
   // COUNT is the canonical field on both sides rather than a `double` variant on
   // one — that keeps our distinct tapOn/doubleTapOn kinds comparable to upstream
@@ -78,7 +84,13 @@ export type CanonicalCommand =
   | { kind: 'waitForAnimationToEnd'; timeout?: number | string }
   | { kind: 'stopApp' }
   | { kind: 'clearState'; appId?: string }
-  | { kind: 'repeat'; times: string | number }
+  | { kind: 'clearKeychain' }
+  | { kind: 'addMedia' }
+  | {
+      kind: 'repeat';
+      times?: string | number;
+      while?: 'visible' | 'notVisible';
+    }
   | { kind: 'retry'; maxRetries?: string | number }
   | { kind: 'runFlow'; label?: string; source: 'file' | 'commands' }
   | { kind: 'runScript' }
@@ -103,12 +115,17 @@ function canonicalizeUpstreamLifecycleCommand(
         kind: 'launchApp' as const,
         appId: str(f.appId),
         clearState: bool(f.clearState),
+        clearKeychain: bool(f.clearKeychain),
         stopApp: bool(f.stopApp),
       });
     case 'StopAppCommand':
       return { kind: 'stopApp' };
     case 'ClearStateCommand':
       return dropUndefined({ kind: 'clearState' as const, appId: str(f.appId) });
+    case 'ClearKeychainCommand':
+      return { kind: 'clearKeychain' };
+    case 'AddMediaCommand':
+      return { kind: 'addMedia' };
     default:
       return undefined;
   }
@@ -213,8 +230,16 @@ function canonicalizeUpstreamCommand(command: UpstreamCommand): CanonicalCommand
         kind: 'waitForAnimationToEnd',
         timeout: numLike(f.timeout) ?? str(f.timeout),
       });
-    case 'RepeatCommand':
+    case 'RepeatCommand': {
+      const condition = asRecord(f.condition);
+      if (condition?.visible != null) {
+        return { kind: 'repeat', while: 'visible' };
+      }
+      if (condition?.notVisible != null) {
+        return { kind: 'repeat', while: 'notVisible' };
+      }
       return { kind: 'repeat', times: numLike(f.times) ?? str(f.times) ?? '' };
+    }
     case 'RetryCommand':
       return dropUndefined({
         kind: 'retry',
@@ -319,12 +344,16 @@ export function canonicalizeAgentCommands(
 
 type AgentLifecycleCommand = Extract<
   MaestroCommand,
-  { kind: 'launchApp' | 'stopApp' | 'clearState' }
+  { kind: 'launchApp' | 'stopApp' | 'clearState' | 'clearKeychain' | 'addMedia' }
 >;
 
 function isAgentLifecycleCommand(command: MaestroCommand): command is AgentLifecycleCommand {
   return (
-    command.kind === 'launchApp' || command.kind === 'stopApp' || command.kind === 'clearState'
+    command.kind === 'launchApp' ||
+    command.kind === 'stopApp' ||
+    command.kind === 'clearState' ||
+    command.kind === 'clearKeychain' ||
+    command.kind === 'addMedia'
   );
 }
 
@@ -338,12 +367,17 @@ function canonicalizeAgentLifecycleCommand(
         kind: 'launchApp',
         appId: command.appId ?? config.appId,
         clearState: command.clearState,
+        clearKeychain: command.clearKeychain,
         stopApp: command.stopApp,
       });
     case 'stopApp':
       return { kind: 'stopApp' };
     case 'clearState':
       return dropUndefined({ kind: 'clearState', appId: command.appId ?? config.appId });
+    case 'clearKeychain':
+      return { kind: 'clearKeychain' };
+    case 'addMedia':
+      return { kind: 'addMedia' };
   }
 }
 
@@ -448,7 +482,11 @@ function canonicalizeAgentCommand(
     case 'waitForAnimationToEnd':
       return dropUndefined({ kind: 'waitForAnimationToEnd', timeout: numLike(command.timeout) });
     case 'repeat':
-      return { kind: 'repeat', times: numLike(command.times) ?? str(command.times) ?? '' };
+      return dropUndefined({
+        kind: 'repeat' as const,
+        times: command.while ? undefined : (numLike(command.times) ?? str(command.times) ?? ''),
+        while: command.while?.mode,
+      });
     case 'retry':
       return dropUndefined({
         kind: 'retry',

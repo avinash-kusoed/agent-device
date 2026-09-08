@@ -55,6 +55,7 @@ export type MaestroLaunchAppCommand = {
   appId?: string;
   stopApp?: boolean;
   clearState?: boolean;
+  clearKeychain?: boolean;
   arguments?: MaestroLaunchArguments;
   launchArguments?: MaestroLaunchArguments;
 };
@@ -213,6 +214,17 @@ export type MaestroClearStateCommand = {
   appId?: string;
 };
 
+export type MaestroClearKeychainCommand = {
+  kind: 'clearKeychain';
+  source: MaestroSourceLocation;
+};
+
+export type MaestroAddMediaCommand = {
+  kind: 'addMedia';
+  source: MaestroSourceLocation;
+  files: string[];
+};
+
 export type MaestroRunScriptCommand = {
   kind: 'runScript';
   source: MaestroSourceLocation;
@@ -236,10 +248,16 @@ export type MaestroRunFlowCommand = {
   label?: string;
 };
 
+export type MaestroRepeatWhileCondition = {
+  mode: 'visible' | 'notVisible';
+  selector: MaestroSelector;
+};
+
 export type MaestroRepeatCommand = {
   kind: 'repeat';
   source: MaestroSourceLocation;
-  times: number | string;
+  times?: number | string;
+  while?: MaestroRepeatWhileCondition;
   commands: MaestroCommand[];
 };
 
@@ -272,6 +290,8 @@ export type MaestroCommand =
   | MaestroWaitForAnimationToEndCommand
   | MaestroStopAppCommand
   | MaestroClearStateCommand
+  | MaestroClearKeychainCommand
+  | MaestroAddMediaCommand
   | MaestroRunScriptCommand
   | MaestroRunFlowCommand
   | MaestroRepeatCommand

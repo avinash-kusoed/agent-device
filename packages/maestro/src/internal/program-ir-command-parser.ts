@@ -1,8 +1,10 @@
 import { isMap, isScalar, isSeq, type Node } from 'yaml';
 import { stripUndefined } from './shared.ts';
 import type {
+  MaestroAddMediaCommand,
   MaestroAssertTrueCommand,
   MaestroBackCommand,
+  MaestroClearKeychainCommand,
   MaestroClearStateCommand,
   MaestroCommand,
   MaestroEraseTextCommand,
@@ -57,6 +59,7 @@ import {
   readScalarMap,
   readScalarValue,
   readSequenceItems,
+  readStringSequence,
   sourceAt,
   type MaestroProgramParseContext,
 } from './program-ir-values.ts';
@@ -124,6 +127,8 @@ const COMMAND_VALUE_PARSERS: Readonly<Record<string, CommandValueParser>> = {
   waitForAnimationToEnd: parseWaitForAnimationToEnd,
   stopApp: parseStopApp,
   clearState: parseClearState,
+  clearKeychain: parseClearKeychain,
+  addMedia: parseAddMedia,
   runScript: parseMaestroRunScriptCommand,
   runFlow: (value, node, context) =>
     parseMaestroRunFlowCommand(value, node, context, parseMaestroCommandList),
@@ -167,7 +172,7 @@ function parseLaunchApp(
   assertOnlyKeys(
     entries,
     'launchApp',
-    ['appId', 'stopApp', 'clearState', 'arguments', 'launchArguments'],
+    ['appId', 'stopApp', 'clearState', 'clearKeychain', 'arguments', 'launchArguments'],
     context,
   );
   const appId = readOptionalEntry(entries, 'appId', (entry) =>
@@ -178,6 +183,9 @@ function parseLaunchApp(
   );
   const clearState = readOptionalEntry(entries, 'clearState', (entry) =>
     readOptionalBoolean(entry, 'launchApp.clearState', context),
+  );
+  const clearKeychain = readOptionalEntry(entries, 'clearKeychain', (entry) =>
+    readOptionalBoolean(entry, 'launchApp.clearKeychain', context),
   );
   const args = readOptionalEntry(entries, 'arguments', (entry) =>
     parseLaunchArguments(entry, 'launchApp.arguments', context),
@@ -191,6 +199,7 @@ function parseLaunchApp(
     appId,
     stopApp,
     clearState,
+    clearKeychain,
     arguments: args,
     launchArguments,
   });
@@ -457,6 +466,39 @@ function parseClearState(
   const source = sourceAt(commandNode, context);
   if (isNullNode(value)) return { kind: 'clearState', source };
   return { kind: 'clearState', source, appId: readRequiredString(value, 'clearState', context) };
+}
+
+function parseClearKeychain(
+  value: Node | null,
+  commandNode: Node,
+  context: MaestroProgramParseContext,
+): MaestroClearKeychainCommand {
+  const source = sourceAt(commandNode, context);
+  if (!isNullNode(value)) {
+    invalidAt('Maestro clearKeychain does not accept a value.', value, context);
+  }
+  return { kind: 'clearKeychain', source };
+}
+
+function parseAddMedia(
+  value: Node | null,
+  commandNode: Node,
+  context: MaestroProgramParseContext,
+): MaestroAddMediaCommand {
+  const source = sourceAt(commandNode, context);
+  if (isScalar(value)) {
+    return {
+      kind: 'addMedia',
+      source,
+      files: [readRequiredString(value, 'addMedia', context)],
+    };
+  }
+  if (isSeq(value)) {
+    const files = readStringSequence(value, 'addMedia', context);
+    if (files.length === 0) invalidAt('Maestro addMedia requires at least one file path.', value, context);
+    return { kind: 'addMedia', source, files };
+  }
+  invalidAt('Maestro addMedia expects a file path string or list of file paths.', value, context);
 }
 
 function parseLaunchArguments(

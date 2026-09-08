@@ -11,6 +11,8 @@ export type MaestroCompatibilityTimingPolicy = {
 export const MAESTRO_COMPATIBILITY_PRESETS = {
   control: {
     retryMaxRetries: 3,
+    /** Guardrail for authored `repeat.while` loops before a condition exits. */
+    repeatWhileMaxIterations: 100,
   },
   command: {
     retryTapMaxAttempts: 2,

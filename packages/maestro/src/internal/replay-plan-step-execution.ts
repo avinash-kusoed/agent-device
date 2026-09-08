@@ -186,8 +186,12 @@ async function executeOpaqueStep(
       await executeNestedSteps(step.body, state);
       return;
     case 'repeat': {
-      const times = readIterationCount(command.times, 0, state.context, 'repeat.times');
       state.executed += 1;
+      if (command.while) {
+        await executeRepeatWhile(step.body, command.while, state);
+        return;
+      }
+      const times = readIterationCount(command.times, 0, state.context, 'repeat.times');
       for (let iteration = 0; iteration < times; iteration += 1) {
         checkpointMaestroCancellation(state.options.signal);
         await executeNestedSteps(step.body, state);
@@ -234,6 +238,27 @@ async function executeRetry(
   }
   if (failure) throw failure;
   throw new AppError('COMMAND_FAILED', 'Maestro retry commands failed.');
+}
+
+async function executeRepeatWhile(
+  steps: readonly MaestroReplayPlanStep[],
+  condition: NonNullable<Extract<MaestroReplayPlanOpaqueStep['command'], { kind: 'repeat' }>['while']>,
+  state: MaestroReplayPlanExecutionState,
+): Promise<void> {
+  const maxIterations = MAESTRO_COMPATIBILITY_PRESETS.control.repeatWhileMaxIterations;
+  for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+    checkpointMaestroCancellation(state.options.signal);
+    const observation = await observe(
+      { kind: condition.mode, selector: condition.selector },
+      MAESTRO_COMPATIBILITY_PRESETS.observation.pollIntervalMs,
+      state,
+    );
+    if (!observation.matched) return;
+    await executeNestedSteps(steps, state);
+  }
+  throw maestroTestFailure(
+    `Maestro repeat.while exceeded ${maxIterations} iterations without the condition becoming false.`,
+  );
 }
 
 async function flowConditionMatches(

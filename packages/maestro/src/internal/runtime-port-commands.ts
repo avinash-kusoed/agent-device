@@ -30,7 +30,7 @@ type MaestroCommandOf<K extends MaestroRuntimeCommand['kind']> = Extract<
 >;
 
 type MaestroLifecycleCommand = MaestroCommandOf<
-  'launchApp' | 'stopApp' | 'clearState' | 'openLink'
+  'launchApp' | 'stopApp' | 'clearState' | 'clearKeychain' | 'openLink' | 'addMedia'
 >;
 type MaestroTargetCommand = MaestroCommandOf<'tapOn' | 'doubleTapOn' | 'longPressOn'>;
 type MaestroTextCommand = MaestroCommandOf<'inputText' | 'eraseText'>;
@@ -56,7 +56,9 @@ const MAESTRO_RUNTIME_COMMAND_HANDLERS = {
   launchApp: executeLifecycleCommand,
   stopApp: executeLifecycleCommand,
   clearState: executeLifecycleCommand,
+  clearKeychain: executeLifecycleCommand,
   openLink: executeLifecycleCommand,
+  addMedia: executeLifecycleCommand,
   tapOn: executeTargetCommand,
   doubleTapOn: executeTargetCommand,
   longPressOn: executeTargetCommand,
@@ -81,7 +83,9 @@ const MAESTRO_COMMAND_REQUIRES_SETTLED_PREDECESSOR = {
   launchApp: true,
   stopApp: true,
   clearState: true,
+  clearKeychain: true,
   openLink: true,
+  addMedia: true,
   tapOn: true,
   doubleTapOn: true,
   longPressOn: true,
@@ -153,10 +157,19 @@ async function executeLifecycleCommand(
         context,
         'invalidate',
       );
+    case 'clearKeychain':
+      return await invokeOperation(operations.clearKeychain, {}, context, 'invalidate');
     case 'openLink':
       return await invokeOperation(
         operations.openLink,
         { link: command.link },
+        context,
+        'invalidate',
+      );
+    case 'addMedia':
+      return await invokeOperation(
+        operations.addMedia,
+        { files: command.files },
         context,
         'invalidate',
       );
@@ -168,6 +181,7 @@ function launchAppInput(command: MaestroCommandOf<'launchApp'>, request: Maestro
     appId: command.appId ?? request.appId,
     stopApp: command.stopApp,
     clearState: command.clearState,
+    clearKeychain: command.clearKeychain,
     arguments: command.arguments,
     launchArguments: command.launchArguments,
   });
